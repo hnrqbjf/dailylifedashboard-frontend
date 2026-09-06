@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meus Medicamentos</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2461D9">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -169,6 +172,106 @@
     margin-bottom: 10px;
   }
 
+  /* ── Cabeçalho da lista: navegação de dia + botão adicionar ── */
+  .list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .date-nav { display: flex; align-items: center; gap: 2px; }
+
+  .nav-btn {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s, color .12s;
+  }
+  .nav-btn:hover:not(:disabled) { background: var(--accent-bg); color: var(--accent); }
+  .nav-btn:disabled { opacity: .3; cursor: default; }
+
+  .date-label-btn {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .date-label-btn:hover { color: var(--text); }
+
+  .btn-hoje {
+    border: none;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .3px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    cursor: pointer;
+    margin-left: 4px;
+  }
+
+  .btn-icon-add {
+    flex-shrink: 0;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .12s, transform .1s;
+  }
+  .btn-icon-add:hover { opacity: .9; }
+  .btn-icon-add:active { transform: scale(.94); }
+
+  #data-picker-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ── Status somente leitura (dias passados) ── */
+  .status-readonly {
+    flex-shrink: 0;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .status-readonly.tomado   { background: var(--tomado-bg);   color: var(--tomado);   }
+  .status-readonly.pendente { background: var(--pendente-bg); color: var(--pendente); }
+  .status-readonly.nao      { background: var(--nao-bg);      color: var(--nao);      }
+
   /* ── Formulário ── */
   .form-card {
     background: var(--surface);
@@ -214,6 +317,60 @@
   .btn-add:hover { opacity: .9; }
   .btn-add:active { transform: scale(.98); }
   .btn-add:disabled { opacity: .5; cursor: default; }
+
+  /* ── Modal (bottom sheet) de adicionar medicamento ── */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,16,28,.45);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s;
+    z-index: 90;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .modal-sheet {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border-radius: 18px 18px 0 0;
+    padding: 20px;
+    box-shadow: 0 -4px 24px rgba(0,0,0,.18);
+    transform: translateY(100%);
+    transition: transform .22s ease-out;
+  }
+  .modal-backdrop.open .modal-sheet { transform: translateY(0); }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .modal-header h2 { font-size: 1rem; font-weight: 600; }
+
+  .btn-close {
+    border: none;
+    background: var(--bg);
+    color: var(--muted);
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-close:hover { color: var(--text); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .modal-backdrop, .modal-sheet { transition: none; }
+  }
 
   /* ── Toast ── */
   #toast {
@@ -264,12 +421,29 @@
   </header>
 
   <div id="list-section">
-    <div class="section-label">Hoje</div>
+    <div class="list-header">
+      <div class="date-nav">
+        <button class="nav-btn" id="nav-prev" aria-label="Dia anterior" onclick="navigateDay(-1)">‹</button>
+        <button class="date-label-btn" id="date-label-btn" onclick="abrirSeletorData()">Hoje</button>
+        <button class="nav-btn" id="nav-next" aria-label="Próximo dia" onclick="navigateDay(1)" disabled>›</button>
+        <button class="btn-hoje" id="btn-hoje" onclick="irParaHoje()" style="display:none">Hoje</button>
+      </div>
+      <button class="btn-icon-add" aria-label="Adicionar medicamento" onclick="abrirModalAdicionar()">+</button>
+    </div>
+    <input type="date" id="data-picker-input" onchange="onDataEscolhida(this.value)">
     <div id="med-list"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 
-  <div class="form-card">
-    <h2>Adicionar medicamento</h2>
+</div>
+
+<div id="toast"></div>
+
+<div class="modal-backdrop" id="modal-backdrop" onclick="fecharModalSeFundo(event)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal-header">
+      <h2 id="modal-titulo">Adicionar medicamento</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalAdicionar()">×</button>
+    </div>
     <form id="add-form" class="form-row" autocomplete="off">
       <div class="field">
         <label for="nome">Nome</label>
@@ -282,10 +456,7 @@
       <button class="btn-add" type="submit">Adicionar</button>
     </form>
   </div>
-
 </div>
-
-<div id="toast"></div>
 
 <script>
 // Troque pela URL real do Cloud Run assim que o deploy existir
@@ -325,11 +496,99 @@ function tratarNaoAutorizado(res) {
   return false;
 }
 
-/* ── Data de hoje ── */
-const hoje = new Date();
-document.getElementById('hoje-label').textContent = hoje.toLocaleDateString('pt-BR', {
+/* ── Data real de hoje (fixa, não muda com a navegação) ── */
+const hojeReal = new Date();
+document.getElementById('hoje-label').textContent = hojeReal.toLocaleDateString('pt-BR', {
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
 });
+
+function dataISOHoje() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/* ── Estado da data sendo visualizada (navegação Hoje / dias anteriores) ── */
+let dataVisualizada = dataISOHoje();
+
+function ehHoje(iso) {
+  return iso === dataISOHoje();
+}
+
+function somarDias(iso, delta) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + delta);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+function atualizarCabecalhoNav() {
+  const label = document.getElementById('date-label-btn');
+  const btnHoje = document.getElementById('btn-hoje');
+  const navNext = document.getElementById('nav-next');
+
+  if (ehHoje(dataVisualizada)) {
+    label.textContent = 'Hoje';
+    btnHoje.style.display = 'none';
+  } else {
+    const [y, m, d] = dataVisualizada.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    label.textContent = dt.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+    btnHoje.style.display = '';
+  }
+
+  navNext.disabled = ehHoje(dataVisualizada);
+  document.getElementById('data-picker-input').value = dataVisualizada;
+}
+
+function navigateDay(delta) {
+  const alvo = somarDias(dataVisualizada, delta);
+  if (alvo > dataISOHoje()) return; // nunca navega pro futuro
+  dataVisualizada = alvo;
+  atualizarCabecalhoNav();
+  loadMeds();
+}
+
+function irParaHoje() {
+  dataVisualizada = dataISOHoje();
+  atualizarCabecalhoNav();
+  loadMeds();
+}
+
+function abrirSeletorData() {
+  const input = document.getElementById('data-picker-input');
+  try {
+    input.showPicker();
+  } catch {
+    input.focus();
+    input.click();
+  }
+}
+
+function onDataEscolhida(valor) {
+  if (!valor) return;
+  if (valor > dataISOHoje()) {
+    toast('Não é possível ver datas futuras.');
+    atualizarCabecalhoNav();
+    return;
+  }
+  dataVisualizada = valor;
+  atualizarCabecalhoNav();
+  loadMeds();
+}
+
+/* ── Modal de adicionar medicamento ── */
+function abrirModalAdicionar() {
+  document.getElementById('modal-backdrop').classList.add('open');
+  setTimeout(() => document.getElementById('nome').focus(), 200);
+}
+
+function fecharModalAdicionar() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+
+function fecharModalSeFundo(e) {
+  if (e.target.id === 'modal-backdrop') fecharModalAdicionar();
+}
 
 /* ── Utilitários ── */
 function toast(msg, dur = 2500) {
@@ -339,8 +598,9 @@ function toast(msg, dur = 2500) {
   setTimeout(() => el.classList.remove('show'), dur);
 }
 
-function isAtrasado(horario, statusHoje) {
-  if (statusHoje !== 'PENDENTE') return false;
+function isAtrasado(horario, statusDia) {
+  if (!ehHoje(dataVisualizada)) return false; // "atrasado" só faz sentido olhando hoje
+  if (statusDia !== 'PENDENTE') return false;
   const [h, m] = horario.split(':').map(Number);
   const agora = new Date();
   return agora.getHours() > h || (agora.getHours() === h && agora.getMinutes() > m);
@@ -361,22 +621,38 @@ function statusLabel(status) {
 /* ── Renderização ── */
 function renderList(meds) {
   const el = document.getElementById('med-list');
+  const hojeSendoVisto = ehHoje(dataVisualizada);
 
   if (!meds.length) {
     el.innerHTML = `<div class="empty">
       <span class="icon">💊</span>
-      Nenhum medicamento cadastrado ainda.
+      ${hojeSendoVisto ? 'Nenhum medicamento cadastrado ainda.' : 'Nenhum medicamento estava ativo nesse dia.'}
     </div>`;
     return;
   }
 
   el.innerHTML = meds.map(med => {
-    const atrasado = isAtrasado(med.horario, med.status_hoje);
-    const cls = med.status_hoje === 'TOMADO' ? 'tomado'
-              : med.status_hoje === 'NAO_TOMADO' ? 'nao'
+    const atrasado = isAtrasado(med.horario, med.status_dia);
+    const cls = med.status_dia === 'TOMADO' ? 'tomado'
+              : med.status_dia === 'NAO_TOMADO' ? 'nao'
               : 'pendente';
-    const disabled = med.status_hoje === 'NAO_TOMADO' ? 'disabled' : '';
     const horaFmt = med.horario.substring(0, 5);
+
+    const acaoHtml = hojeSendoVisto
+      ? `<button
+          class="btn-status ${cls}"
+          data-id="${med.id}"
+          data-status="${med.status_dia}"
+          ${med.status_dia === 'NAO_TOMADO' ? 'disabled' : ''}
+          onclick="toggleStatus(this)"
+        >
+          <span>${statusIcon(med.status_dia)}</span>
+          <span>${statusLabel(med.status_dia)}</span>
+        </button>`
+      : `<span class="status-readonly ${cls}">
+          <span>${statusIcon(med.status_dia)}</span>
+          <span>${statusLabel(med.status_dia) === 'Marcar' ? 'Pendente' : statusLabel(med.status_dia)}</span>
+        </span>`;
 
     return `<div class="med-card" style="margin-bottom:10px">
       <div class="med-info">
@@ -386,16 +662,7 @@ function renderList(meds) {
           ${atrasado ? '<span class="badge-atrasado">Atrasado</span>' : ''}
         </div>
       </div>
-      <button
-        class="btn-status ${cls}"
-        data-id="${med.id}"
-        data-status="${med.status_hoje}"
-        ${disabled}
-        onclick="toggleStatus(this)"
-      >
-        <span>${statusIcon(med.status_hoje)}</span>
-        <span>${statusLabel(med.status_hoje)}</span>
-      </button>
+      ${acaoHtml}
     </div>`;
   }).join('');
 }
@@ -404,20 +671,25 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── Carregar lista ── */
+/* ── Carregar lista (do dia sendo visualizado) ── */
 async function loadMeds() {
+  const listEl = document.getElementById('med-list');
+  listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    const res = await fetch(`${API}/medicamentos`, { headers: authHeaders() });
+    const url = ehHoje(dataVisualizada)
+      ? `${API}/medicamentos`
+      : `${API}/medicamentos?data=${dataVisualizada}`;
+    const res = await fetch(url, { headers: authHeaders() });
     if (tratarNaoAutorizado(res)) return;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     renderList(await res.json());
   } catch (e) {
-    document.getElementById('med-list').innerHTML =
+    listEl.innerHTML =
       `<div class="empty"><span class="icon">⚠️</span>Não foi possível conectar ao servidor.<br><small>Verifique sua conexão e tente recarregar a página.</small></div>`;
   }
 }
 
-/* ── Toggle TOMADO / PENDENTE ── */
+/* ── Toggle TOMADO / PENDENTE (sempre no dia de hoje) ── */
 async function toggleStatus(btn) {
   const id = btn.dataset.id;
   const current = btn.dataset.status;
@@ -460,7 +732,8 @@ document.getElementById('add-form').addEventListener('submit', async e => {
     if (!res.ok) throw new Error();
     e.target.reset();
     toast(`${nome} adicionado ✓`);
-    await loadMeds();
+    fecharModalAdicionar();
+    if (!ehHoje(dataVisualizada)) irParaHoje(); else await loadMeds();
   } catch {
     toast('Erro ao adicionar medicamento');
   } finally {
@@ -470,7 +743,18 @@ document.getElementById('add-form').addEventListener('submit', async e => {
 });
 
 /* ── Init ── */
+atualizarCabecalhoNav();
 loadMeds();
+
+/* ── PWA: registra o service worker (necessário pra virar instalável) ── */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {
+      // Falha silenciosa: sem service worker, o app ainda funciona normalmente,
+      // só não fica instalável/offline — não é crítico pro uso do dia a dia.
+    });
+  });
+}
 </script>
 </body>
 </html>
