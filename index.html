@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meus Medicamentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #EEF2F8;
+    --surface:   #FFFFFF;
+    --border:    #D4DCE9;
+    --text:      #111827;
+    --muted:     #5C6B82;
+    --accent:    #2461D9;
+    --accent-bg: #EBF0FD;
+    --tomado:    #0E9E6A;
+    --tomado-bg: #E8F8F2;
+    --pendente:  #D97706;
+    --pendente-bg: #FEF3E2;
+    --nao:       #D93636;
+    --nao-bg:    #FDEAEA;
+    --shadow:    0 1px 3px rgba(20,40,80,.08), 0 1px 8px rgba(20,40,80,.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0D1219;
+      --surface:   #151E2A;
+      --border:    #232F3E;
+      --text:      #E8EFF8;
+      --muted:     #7A8FA6;
+      --accent:    #4D86F5;
+      --accent-bg: #162040;
+      --tomado:    #22C78A;
+      --tomado-bg: #0A2418;
+      --pendente:  #F59E0B;
+      --pendente-bg: #2A1C06;
+      --nao:       #F56565;
+      --nao-bg:    #2A0A0A;
+      --shadow:    0 1px 3px rgba(0,0,0,.3);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:        #0D1219;
+    --surface:   #151E2A;
+    --border:    #232F3E;
+    --text:      #E8EFF8;
+    --muted:     #7A8FA6;
+    --accent:    #4D86F5;
+    --accent-bg: #162040;
+    --tomado:    #22C78A;
+    --tomado-bg: #0A2418;
+    --pendente:  #F59E0B;
+    --pendente-bg: #2A1C06;
+    --nao:       #F56565;
+    --nao-bg:    #2A0A0A;
+    --shadow:    0 1px 3px rgba(0,0,0,.3);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 64px;
+  }
+
+  .shell {
+    max-width: 440px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* ── Header ── */
+  .header { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+  .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px; }
+  .header .date { font-size: .875rem; color: var(--muted); font-weight: 500; }
+
+  /* ── Cards de medicamento ── */
+  .med-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: var(--shadow);
+    transition: box-shadow .15s;
+  }
+  .med-card:hover { box-shadow: 0 2px 10px rgba(20,40,80,.12); }
+
+  .med-info { flex: 1; min-width: 0; }
+  .med-nome {
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .med-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .med-hora {
+    font-size: .8rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .badge-atrasado {
+    font-size: .7rem;
+    font-weight: 600;
+    color: var(--pendente);
+    background: var(--pendente-bg);
+    padding: 1px 7px;
+    border-radius: 99px;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+
+  /* ── Botão de status ── */
+  .btn-status {
+    flex-shrink: 0;
+    border: none;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .2px;
+    transition: opacity .12s, transform .1s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-status:active { transform: scale(.96); }
+  .btn-status:disabled { opacity: .45; cursor: default; }
+
+  .btn-status.tomado   { background: var(--tomado-bg);   color: var(--tomado);   }
+  .btn-status.pendente { background: var(--pendente-bg); color: var(--pendente); }
+  .btn-status.nao      { background: var(--nao-bg);      color: var(--nao);      cursor: default; }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+  .empty .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+  /* ── Seção ── */
+  .section-label {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* ── Formulário ── */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .form-card h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .form-row { display: flex; flex-direction: column; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: .8rem; font-weight: 600; color: var(--muted); letter-spacing: .3px; }
+  .field input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: .95rem;
+    color: var(--text);
+    transition: border-color .15s;
+    outline: none;
+  }
+  .field input:focus { border-color: var(--accent); }
+
+  .btn-add {
+    margin-top: 4px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn-add:hover { opacity: .9; }
+  .btn-add:active { transform: scale(.98); }
+  .btn-add:disabled { opacity: .5; cursor: default; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--text);
+    color: var(--surface);
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: .875rem;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 100;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── Spinner ── */
+  .loading { display: flex; justify-content: center; padding: 32px 0; }
+  .spinner {
+    width: 24px; height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; }
+    .btn-status, .btn-add, #toast { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="header">
+    <h1>Meus Medicamentos</h1>
+    <p class="date" id="hoje-label"></p>
+  </header>
+
+  <div id="list-section">
+    <div class="section-label">Hoje</div>
+    <div id="med-list"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <div class="form-card">
+    <h2>Adicionar medicamento</h2>
+    <form id="add-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="nome">Nome</label>
+        <input id="nome" name="nome" type="text" placeholder="Ex: Losartana 50mg" required>
+      </div>
+      <div class="field">
+        <label for="horario">Horário fixo</label>
+        <input id="horario" name="horario" type="time" required>
+      </div>
+      <button class="btn-add" type="submit">Adicionar</button>
+    </form>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// Troque pela URL real do Cloud Run assim que o deploy existir
+// (ex: 'https://dld-app-xxxxxxx-uw.a.run.app').
+const API = 'http://localhost:8000';
+
+/* ── Chave de API: pedida uma vez, guardada só neste navegador ──
+   Nunca fica escrita em nenhum arquivo do repositório — só existe
+   dentro do localStorage do aparelho de quem está usando o app. */
+const API_KEY_STORAGE = 'dld_api_key';
+
+function getApiKey() {
+  let chave = localStorage.getItem(API_KEY_STORAGE);
+  while (!chave) {
+    chave = prompt('Cole sua chave de acesso ao app:');
+    if (chave) {
+      chave = chave.trim();
+      localStorage.setItem(API_KEY_STORAGE, chave);
+    }
+  }
+  return chave;
+}
+
+function authHeaders(extra = {}) {
+  return { 'Authorization': `Bearer ${getApiKey()}`, ...extra };
+}
+
+/* Se o servidor disser que a chave está errada (401), esquece a chave salva
+   e pede de novo na próxima ação — evita ficar preso com uma chave inválida
+   sem saber por quê. */
+function tratarNaoAutorizado(res) {
+  if (res.status === 401) {
+    localStorage.removeItem(API_KEY_STORAGE);
+    toast('Chave de acesso inválida. Recarregue a página para tentar de novo.');
+    return true;
+  }
+  return false;
+}
+
+/* ── Data de hoje ── */
+const hoje = new Date();
+document.getElementById('hoje-label').textContent = hoje.toLocaleDateString('pt-BR', {
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+});
+
+/* ── Utilitários ── */
+function toast(msg, dur = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function isAtrasado(horario, statusHoje) {
+  if (statusHoje !== 'PENDENTE') return false;
+  const [h, m] = horario.split(':').map(Number);
+  const agora = new Date();
+  return agora.getHours() > h || (agora.getHours() === h && agora.getMinutes() > m);
+}
+
+function statusIcon(status) {
+  if (status === 'TOMADO')    return '✓';
+  if (status === 'NAO_TOMADO') return '✗';
+  return '○';
+}
+
+function statusLabel(status) {
+  if (status === 'TOMADO')    return 'Tomado';
+  if (status === 'NAO_TOMADO') return 'Não tomado';
+  return 'Marcar';
+}
+
+/* ── Renderização ── */
+function renderList(meds) {
+  const el = document.getElementById('med-list');
+
+  if (!meds.length) {
+    el.innerHTML = `<div class="empty">
+      <span class="icon">💊</span>
+      Nenhum medicamento cadastrado ainda.
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = meds.map(med => {
+    const atrasado = isAtrasado(med.horario, med.status_hoje);
+    const cls = med.status_hoje === 'TOMADO' ? 'tomado'
+              : med.status_hoje === 'NAO_TOMADO' ? 'nao'
+              : 'pendente';
+    const disabled = med.status_hoje === 'NAO_TOMADO' ? 'disabled' : '';
+    const horaFmt = med.horario.substring(0, 5);
+
+    return `<div class="med-card" style="margin-bottom:10px">
+      <div class="med-info">
+        <div class="med-nome">${escHtml(med.nome)}</div>
+        <div class="med-meta">
+          <span class="med-hora">${horaFmt}</span>
+          ${atrasado ? '<span class="badge-atrasado">Atrasado</span>' : ''}
+        </div>
+      </div>
+      <button
+        class="btn-status ${cls}"
+        data-id="${med.id}"
+        data-status="${med.status_hoje}"
+        ${disabled}
+        onclick="toggleStatus(this)"
+      >
+        <span>${statusIcon(med.status_hoje)}</span>
+        <span>${statusLabel(med.status_hoje)}</span>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Carregar lista ── */
+async function loadMeds() {
+  try {
+    const res = await fetch(`${API}/medicamentos`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    renderList(await res.json());
+  } catch (e) {
+    document.getElementById('med-list').innerHTML =
+      `<div class="empty"><span class="icon">⚠️</span>Não foi possível conectar ao servidor.<br><small>Verifique sua conexão e tente recarregar a página.</small></div>`;
+  }
+}
+
+/* ── Toggle TOMADO / PENDENTE ── */
+async function toggleStatus(btn) {
+  const id = btn.dataset.id;
+  const current = btn.dataset.status;
+  const next = current === 'TOMADO' ? 'PENDENTE' : 'TOMADO';
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/medicamentos/${id}/registro-diario`, {
+      method: 'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ status: next }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    toast(next === 'TOMADO' ? 'Marcado como tomado ✓' : 'Desmarcado');
+    await loadMeds();
+  } catch {
+    toast('Erro ao atualizar status');
+    btn.disabled = false;
+  }
+}
+
+/* ── Adicionar medicamento ── */
+document.getElementById('add-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  const nome = document.getElementById('nome').value.trim();
+  const horario = document.getElementById('horario').value;
+
+  btn.disabled = true;
+  btn.textContent = 'Adicionando…';
+
+  try {
+    const res = await fetch(`${API}/medicamentos`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ nome, horario }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    e.target.reset();
+    toast(`${nome} adicionado ✓`);
+    await loadMeds();
+  } catch {
+    toast('Erro ao adicionar medicamento');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Adicionar';
+  }
+});
+
+/* ── Init ── */
+loadMeds();
+</script>
+</body>
+</html>
