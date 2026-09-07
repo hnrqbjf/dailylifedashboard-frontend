@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Meus Medicamentos</title>
+<title>DLD - Daily Life Dashboard</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2461D9">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -416,7 +417,7 @@
 <div class="shell">
 
   <header class="header">
-    <h1>Meus Medicamentos</h1>
+    <h1>DLD - Daily Life Dashboard</h1>
     <p class="date" id="hoje-label"></p>
   </header>
 
@@ -630,6 +631,24 @@ function renderList(meds) {
     </div>`;
     return;
   }
+
+  // NOVA LÓGICA DE ORDENAÇÃO
+  meds.sort((a, b) => {
+    // 1. Define pesos para os status (PENDENTE vem primeiro, TOMADO depois)
+    const pesoStatus = { 'PENDENTE': 1, 'TOMADO': 2 };
+    
+    // Se houver algum outro status (como NAO_TOMADO), ele recebe peso 3 (vai pro final)
+    const pesoA = pesoStatus[a.status_dia] || 3;
+    const pesoB = pesoStatus[b.status_dia] || 3;
+
+    // Se os status forem diferentes, ordena pelos pesos
+    if (pesoA !== pesoB) {
+      return pesoA - pesoB; 
+    }
+    
+    // 2. Se os status forem iguais, ordena pelo horário (do menor para o maior)
+    return a.horario.localeCompare(b.horario);
+  });
 
   el.innerHTML = meds.map(med => {
     const atrasado = isAtrasado(med.horario, med.status_dia);
