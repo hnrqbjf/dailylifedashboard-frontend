@@ -25,6 +25,8 @@
     --pendente-bg: #FEF3E2;
     --nao:       #D93636;
     --nao-bg:    #FDEAEA;
+    --anulado:    #6B7280;
+    --anulado-bg: #EEF1F5;
     --shadow:    0 1px 3px rgba(20,40,80,.08), 0 1px 8px rgba(20,40,80,.05);
   }
 
@@ -43,6 +45,8 @@
       --pendente-bg: #2A1C06;
       --nao:       #F56565;
       --nao-bg:    #2A0A0A;
+      --anulado:    #9AA7B8;
+      --anulado-bg: #1B2634;
       --shadow:    0 1px 3px rgba(0,0,0,.3);
     }
   }
@@ -61,6 +65,8 @@
     --pendente-bg: #2A1C06;
     --nao:       #F56565;
     --nao-bg:    #2A0A0A;
+    --anulado:    #9AA7B8;
+    --anulado-bg: #1B2634;
     --shadow:    0 1px 3px rgba(0,0,0,.3);
   }
 
@@ -71,7 +77,7 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding: 24px 16px 64px;
+    padding: 24px 16px 88px;
   }
 
   .shell {
@@ -79,7 +85,7 @@
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
   }
 
   /* ── Header ── */
@@ -87,19 +93,66 @@
   .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px; }
   .header .date { font-size: .875rem; color: var(--muted); font-weight: 500; }
 
-  /* ── Cards de medicamento ── */
-  .med-card {
+  /* ── Card expansível (Medicamentos e Hábitos) ── */
+  .card {
     background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-header:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  .card-header-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+  }
+  .card-header-title .icone { font-size: 1.1rem; }
+  .card-header-title .nome { font-size: 1.05rem; font-weight: 700; }
+  .card-header-sub {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chevron {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: .8rem;
+    transition: transform .2s;
+  }
+  .card.open .chevron { transform: rotate(180deg); }
+
+  .card-body { display: none; padding: 0 16px 16px; }
+  .card.open .card-body { display: block; }
+
+  /* ── Cards de medicamento / linhas de hábito ── */
+  .med-card {
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 16px;
     display: flex;
     align-items: center;
     gap: 14px;
-    box-shadow: var(--shadow);
     transition: box-shadow .15s;
   }
-  .med-card:hover { box-shadow: 0 2px 10px rgba(20,40,80,.12); }
 
   .med-info { flex: 1; min-width: 0; }
   .med-nome {
@@ -131,7 +184,7 @@
     text-transform: uppercase;
   }
 
-  /* ── Botão de status ── */
+  /* ── Botão de status (Medicamentos) ── */
   .btn-status {
     flex-shrink: 0;
     border: none;
@@ -173,12 +226,13 @@
     margin-bottom: 10px;
   }
 
-  /* ── Cabeçalho da lista: navegação de dia + botão adicionar ── */
+  /* ── Cabeçalho de lista: navegação de dia / label + botão adicionar ── */
   .list-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
+    gap: 8px;
   }
 
   .date-nav { display: flex; align-items: center; gap: 2px; }
@@ -257,7 +311,7 @@
     pointer-events: none;
   }
 
-  /* ── Status somente leitura (dias passados) ── */
+  /* ── Status somente leitura (dias passados de Medicamentos) ── */
   .status-readonly {
     flex-shrink: 0;
     border-radius: 10px;
@@ -273,19 +327,117 @@
   .status-readonly.pendente { background: var(--pendente-bg); color: var(--pendente); }
   .status-readonly.nao      { background: var(--nao-bg);      color: var(--nao);      }
 
-  /* ── Formulário ── */
-  .form-card {
-    background: var(--surface);
+  /* ── Hábitos: linha por hábito ── */
+  .habito-grupo { margin-bottom: 14px; }
+  .habito-grupo:last-child { margin-bottom: 0; }
+
+  .habito-row {
+    background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px;
-    box-shadow: var(--shadow);
+    border-radius: 12px;
+    padding: 10px 10px 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
   }
-  .form-card h2 {
-    font-size: 1rem;
+  .habito-row:last-child { margin-bottom: 0; }
+
+  .habito-nome {
+    flex: 1;
+    min-width: 0;
+    font-size: .92rem;
     font-weight: 600;
-    margin-bottom: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
+
+  .habito-actions { display: flex; align-items: center; gap: 4px; }
+
+  .btn-habito-status {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 8px;
+    font-size: .85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .12s, transform .1s;
+  }
+  .btn-habito-status:active { transform: scale(.92); }
+  .btn-habito-status.ativo.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   border-color: transparent; }
+  .btn-habito-status.ativo.cor-nao-feito { background: var(--nao-bg);      color: var(--nao);      border-color: transparent; }
+  .btn-habito-status.ativo.cor-anulado   { background: var(--anulado-bg); color: var(--anulado); border-color: transparent; }
+
+  .btn-icon-ghost {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 7px;
+    font-size: .85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s, color .12s;
+  }
+  .btn-icon-ghost:hover { background: var(--accent-bg); color: var(--accent); }
+
+  /* ── Calendário de Hábitos ── */
+  .btn-toggle-calendario {
+    margin-top: 14px;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+  }
+
+  .calendario-wrap { display: none; margin-top: 6px; }
+  .calendario-wrap.open { display: block; }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+  }
+  .cal-dia {
+    aspect-ratio: 1;
+    border-radius: 5px;
+    background: var(--anulado-bg);
+  }
+  .cal-dia.cal-concluido { background: var(--tomado); }
+  .cal-dia.cal-quebrado  { background: var(--nao); }
+  .cal-dia.cal-neutro    { background: var(--anulado); }
+  .cal-dia.cal-aberto    { background: transparent; border: 1px dashed var(--border); }
+
+  .cal-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: .75rem;
+    color: var(--muted);
+  }
+  .cal-legenda span { display: flex; align-items: center; gap: 5px; }
+  .cal-dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+  .cal-dot.cal-concluido { background: var(--tomado); }
+  .cal-dot.cal-quebrado  { background: var(--nao); }
+  .cal-dot.cal-neutro    { background: var(--anulado); }
+
+  /* ── Formulário ── */
   .form-row { display: flex; flex-direction: column; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 5px; }
   .field label { font-size: .8rem; font-weight: 600; color: var(--muted); letter-spacing: .3px; }
@@ -301,6 +453,7 @@
     outline: none;
   }
   .field input:focus { border-color: var(--accent); }
+  .field-aviso { font-size: .75rem; color: var(--muted); margin-top: -4px; }
 
   .btn-add {
     margin-top: 4px;
@@ -319,7 +472,7 @@
   .btn-add:active { transform: scale(.98); }
   .btn-add:disabled { opacity: .5; cursor: default; }
 
-  /* ── Modal (bottom sheet) de adicionar medicamento ── */
+  /* ── Modal (bottom sheet) ── */
   .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -373,6 +526,29 @@
     .modal-backdrop, .modal-sheet { transition: none; }
   }
 
+  /* ── Botão global: minimizar todos os cards ── */
+  .btn-minimizar-tudo {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 9px 16px;
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    z-index: 40;
+    transition: color .12s, border-color .12s;
+  }
+  .btn-minimizar-tudo:hover { color: var(--accent); border-color: var(--accent); }
+
   /* ── Toast ── */
   #toast {
     position: fixed;
@@ -421,40 +597,111 @@
     <p class="date" id="hoje-label"></p>
   </header>
 
-  <div id="list-section">
-    <div class="list-header">
-      <div class="date-nav">
-        <button class="nav-btn" id="nav-prev" aria-label="Dia anterior" onclick="navigateDay(-1)">‹</button>
-        <button class="date-label-btn" id="date-label-btn" onclick="abrirSeletorData()">Hoje</button>
-        <button class="nav-btn" id="nav-next" aria-label="Próximo dia" onclick="navigateDay(1)" disabled>›</button>
-        <button class="btn-hoje" id="btn-hoje" onclick="irParaHoje()" style="display:none">Hoje</button>
+  <!-- ═══════════════ Card: Medicamentos ═══════════════ -->
+  <div class="card" id="card-medicamentos">
+    <div class="card-header" role="button" tabindex="0" aria-expanded="false"
+         onclick="toggleCard('medicamentos')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('medicamentos');}">
+      <div class="card-header-title">
+        <span class="icone">💊</span>
+        <span class="nome">Medicamentos</span>
       </div>
-      <button class="btn-icon-add" aria-label="Adicionar medicamento" onclick="abrirModalAdicionar()">+</button>
+      <span class="chevron">▾</span>
     </div>
-    <input type="date" id="data-picker-input" onchange="onDataEscolhida(this.value)">
-    <div id="med-list"><div class="loading"><div class="spinner"></div></div></div>
+
+    <div class="card-body" id="medicamentos-body">
+      <div class="list-header">
+        <div class="date-nav">
+          <button class="nav-btn" id="nav-prev" aria-label="Dia anterior" onclick="navigateDay(-1)">‹</button>
+          <button class="date-label-btn" id="date-label-btn" onclick="abrirSeletorData()">Hoje</button>
+          <button class="nav-btn" id="nav-next" aria-label="Próximo dia" onclick="navigateDay(1)" disabled>›</button>
+          <button class="btn-hoje" id="btn-hoje" onclick="irParaHoje()" style="display:none">Hoje</button>
+        </div>
+        <button class="btn-icon-add" aria-label="Adicionar medicamento" onclick="abrirModalMedicamento()">+</button>
+      </div>
+      <input type="date" id="data-picker-input" onchange="onDataEscolhida(this.value)">
+      <div id="med-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Card: Hábitos ═══════════════ -->
+  <div class="card" id="card-habitos">
+    <div class="card-header" role="button" tabindex="0" aria-expanded="false"
+         onclick="toggleCard('habitos')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('habitos');}">
+      <div class="card-header-title">
+        <span class="icone">🧩</span>
+        <span class="nome">Hábitos</span>
+      </div>
+      <span class="card-header-sub" id="habitos-header-badges"></span>
+      <span class="chevron">▾</span>
+    </div>
+
+    <div class="card-body" id="habitos-body">
+      <div class="list-header">
+        <span class="section-label" style="margin-bottom:0">Seus hábitos</span>
+        <button class="btn-icon-add" aria-label="Adicionar hábito" onclick="abrirModalHabito()">+</button>
+      </div>
+      <div id="habitos-list"><div class="loading"><div class="spinner"></div></div></div>
+
+      <button class="btn-toggle-calendario" id="btn-toggle-calendario" onclick="toggleCalendario()">Ver calendário ▾</button>
+      <div class="calendario-wrap" id="habitos-calendario">
+        <div class="cal-grid" id="calendario-grid"></div>
+        <div class="cal-legenda">
+          <span><i class="cal-dot cal-concluido"></i> Concluído</span>
+          <span><i class="cal-dot cal-quebrado"></i> Quebrado</span>
+          <span><i class="cal-dot cal-neutro"></i> Neutro</span>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>
 
+<!-- Botão global — minimiza todos os cards abertos, sem descartar o que já foi carregado -->
+<button class="btn-minimizar-tudo" id="btn-minimizar-tudo" onclick="minimizarTudo()">▾ Minimizar tudo</button>
+
 <div id="toast"></div>
 
-<div class="modal-backdrop" id="modal-backdrop" onclick="fecharModalSeFundo(event)">
-  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+<!-- Modal: Adicionar medicamento -->
+<div class="modal-backdrop" id="modal-backdrop-med" onclick="fecharModalSeFundo(event, 'modal-backdrop-med', fecharModalMedicamento)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-med">
     <div class="modal-header">
-      <h2 id="modal-titulo">Adicionar medicamento</h2>
-      <button class="btn-close" aria-label="Fechar" onclick="fecharModalAdicionar()">×</button>
+      <h2 id="modal-titulo-med">Adicionar medicamento</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalMedicamento()">×</button>
     </div>
-    <form id="add-form" class="form-row" autocomplete="off">
+    <form id="add-form-med" class="form-row" autocomplete="off">
       <div class="field">
-        <label for="nome">Nome</label>
-        <input id="nome" name="nome" type="text" placeholder="Ex: Losartana 50mg" required>
+        <label for="med-nome">Nome</label>
+        <input id="med-nome" name="nome" type="text" placeholder="Ex: Losartana 50mg" required>
       </div>
       <div class="field">
-        <label for="horario">Horário fixo</label>
-        <input id="horario" name="horario" type="time" required>
+        <label for="med-horario">Horário fixo</label>
+        <input id="med-horario" name="horario" type="time" required>
       </div>
       <button class="btn-add" type="submit">Adicionar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Criar/editar hábito -->
+<div class="modal-backdrop" id="modal-backdrop-habito" onclick="fecharModalSeFundo(event, 'modal-backdrop-habito', fecharModalHabito)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-habito">
+    <div class="modal-header">
+      <h2 id="modal-titulo-habito">Novo hábito</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalHabito()">×</button>
+    </div>
+    <form id="habito-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="habito-nome">Nome</label>
+        <input id="habito-nome" name="nome" type="text" placeholder="Ex: Meditar" required>
+      </div>
+      <div class="field">
+        <label for="habito-categoria">Categoria (opcional)</label>
+        <input id="habito-categoria" name="categoria" type="text" placeholder="Ex: Saúde">
+      </div>
+      <p class="field-aviso" id="habito-edit-aviso" style="display:none">A alteração vale a partir de hoje — dias já fechados não mudam.</p>
+      <button class="btn-add" type="submit" id="habito-form-submit">Adicionar</button>
     </form>
   </div>
 </div>
@@ -507,6 +754,64 @@ function dataISOHoje() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+
+/* ── Utilitários compartilhados ── */
+function toast(msg, dur = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fecharModalSeFundo(e, backdropId, fecharFn) {
+  if (e.target.id === backdropId) fecharFn();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Cards expansíveis — lazy init: fechado não chama API nenhuma; a
+   primeira expansão de cada card dispara o carregamento daquele
+   módulo. Reabrir depois de minimizado NUNCA dispara um novo fetch —
+   só alterna visibilidade (classe "open").
+   ══════════════════════════════════════════════════════════════════ */
+const cardState = {
+  medicamentos: { iniciado: false, open: false },
+  habitos:      { iniciado: false, open: false },
+};
+
+function toggleCard(nomeModulo) {
+  const state = cardState[nomeModulo];
+  const card = document.getElementById(`card-${nomeModulo}`);
+  const header = card.querySelector('.card-header');
+
+  state.open = !state.open;
+  card.classList.toggle('open', state.open);
+  header.setAttribute('aria-expanded', String(state.open));
+
+  if (state.open && !state.iniciado) {
+    state.iniciado = true;
+    if (nomeModulo === 'medicamentos') initMedicamentos();
+    if (nomeModulo === 'habitos') initHabitos();
+  }
+}
+
+function minimizarTudo() {
+  Object.keys(cardState).forEach(nomeModulo => {
+    if (cardState[nomeModulo].open) {
+      cardState[nomeModulo].open = false;
+      const card = document.getElementById(`card-${nomeModulo}`);
+      card.classList.remove('open');
+      card.querySelector('.card-header').setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MEDICAMENTOS
+   ══════════════════════════════════════════════════════════════════ */
 
 /* ── Estado da data sendo visualizada (navegação Hoje / dias anteriores) ── */
 let dataVisualizada = dataISOHoje();
@@ -578,25 +883,13 @@ function onDataEscolhida(valor) {
 }
 
 /* ── Modal de adicionar medicamento ── */
-function abrirModalAdicionar() {
-  document.getElementById('modal-backdrop').classList.add('open');
-  setTimeout(() => document.getElementById('nome').focus(), 200);
+function abrirModalMedicamento() {
+  document.getElementById('modal-backdrop-med').classList.add('open');
+  setTimeout(() => document.getElementById('med-nome').focus(), 200);
 }
 
-function fecharModalAdicionar() {
-  document.getElementById('modal-backdrop').classList.remove('open');
-}
-
-function fecharModalSeFundo(e) {
-  if (e.target.id === 'modal-backdrop') fecharModalAdicionar();
-}
-
-/* ── Utilitários ── */
-function toast(msg, dur = 2500) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), dur);
+function fecharModalMedicamento() {
+  document.getElementById('modal-backdrop-med').classList.remove('open');
 }
 
 function isAtrasado(horario, statusDia) {
@@ -636,16 +929,16 @@ function renderList(meds) {
   meds.sort((a, b) => {
     // 1. Define pesos para os status (PENDENTE vem primeiro, TOMADO depois)
     const pesoStatus = { 'PENDENTE': 1, 'TOMADO': 2 };
-    
+
     // Se houver algum outro status (como NAO_TOMADO), ele recebe peso 3 (vai pro final)
     const pesoA = pesoStatus[a.status_dia] || 3;
     const pesoB = pesoStatus[b.status_dia] || 3;
 
     // Se os status forem diferentes, ordena pelos pesos
     if (pesoA !== pesoB) {
-      return pesoA - pesoB; 
+      return pesoA - pesoB;
     }
-    
+
     // 2. Se os status forem iguais, ordena pelo horário (do menor para o maior)
     return a.horario.localeCompare(b.horario);
   });
@@ -684,10 +977,6 @@ function renderList(meds) {
       ${acaoHtml}
     </div>`;
   }).join('');
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ── Carregar lista (do dia sendo visualizado) ── */
@@ -732,11 +1021,11 @@ async function toggleStatus(btn) {
 }
 
 /* ── Adicionar medicamento ── */
-document.getElementById('add-form').addEventListener('submit', async e => {
+document.getElementById('add-form-med').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = e.target.querySelector('button');
-  const nome = document.getElementById('nome').value.trim();
-  const horario = document.getElementById('horario').value;
+  const nome = document.getElementById('med-nome').value.trim();
+  const horario = document.getElementById('med-horario').value;
 
   btn.disabled = true;
   btn.textContent = 'Adicionando…';
@@ -751,7 +1040,7 @@ document.getElementById('add-form').addEventListener('submit', async e => {
     if (!res.ok) throw new Error();
     e.target.reset();
     toast(`${nome} adicionado ✓`);
-    fecharModalAdicionar();
+    fecharModalMedicamento();
     if (!ehHoje(dataVisualizada)) irParaHoje(); else await loadMeds();
   } catch {
     toast('Erro ao adicionar medicamento');
@@ -761,9 +1050,307 @@ document.getElementById('add-form').addEventListener('submit', async e => {
   }
 });
 
-/* ── Init ── */
-atualizarCabecalhoNav();
-loadMeds();
+/* ── Init (só roda na primeira expansão do card) ── */
+function initMedicamentos() {
+  atualizarCabecalhoNav();
+  loadMeds();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HÁBITOS
+   ══════════════════════════════════════════════════════════════════ */
+
+let habitosCache = [];
+let streakAtual = 0;
+let habitoEditandoId = null;
+let calendarioIniciado = false;
+
+/* ── Init (só roda na primeira expansão do card) ── */
+async function initHabitos() {
+  await Promise.all([carregarStreak(), carregarHabitosLista()]);
+}
+
+async function carregarStreak() {
+  try {
+    const res = await fetch(`${API}/habitos/streak`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    streakAtual = data.streak_atual;
+    atualizarHeaderHabitos();
+  } catch {
+    // silencioso — o header simplesmente não mostra a streak; a lista de
+    // hábitos ainda tenta carregar normalmente.
+  }
+}
+
+async function carregarHabitosLista() {
+  const listEl = document.getElementById('habitos-list');
+  listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const res = await fetch(`${API}/habitos`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    habitosCache = await res.json();
+    renderHabitos();
+    atualizarHeaderHabitos();
+  } catch {
+    listEl.innerHTML =
+      `<div class="empty"><span class="icon">⚠️</span>Não foi possível conectar ao servidor.<br><small>Verifique sua conexão e tente recarregar a página.</small></div>`;
+  }
+}
+
+/* ── Indicador do cabeçalho: streak + "X de Y" (RN-17, calculado aqui,
+   nunca pelo backend) ── */
+function atualizarHeaderHabitos() {
+  const badge = document.getElementById('habitos-header-badges');
+  const total = habitosCache.length;
+  if (total === 0) {
+    badge.textContent = streakAtual ? `🔥 ${streakAtual}` : '';
+    return;
+  }
+  const feitos = habitosCache.filter(h => h.status_hoje === 'FEITO').length;
+  const anulados = habitosCache.filter(h => h.status_hoje === 'ANULADO').length;
+  const y = total - anulados;
+  badge.textContent = `🔥 ${streakAtual} · ${feitos}/${y} hoje`;
+}
+
+/* ── Renderização, agrupada por categoria (client-side, RN-22) ── */
+function renderHabitos() {
+  const el = document.getElementById('habitos-list');
+
+  if (!habitosCache.length) {
+    el.innerHTML = `<div class="empty"><span class="icon">🧩</span>Nenhum hábito cadastrado ainda.</div>`;
+    return;
+  }
+
+  const grupos = {};
+  habitosCache.forEach(h => {
+    const cat = (h.categoria || '').trim() || 'Sem categoria';
+    if (!grupos[cat]) grupos[cat] = [];
+    grupos[cat].push(h);
+  });
+
+  const categorias = Object.keys(grupos).sort((a, b) => {
+    if (a === 'Sem categoria') return 1;
+    if (b === 'Sem categoria') return -1;
+    return a.localeCompare(b, 'pt-BR');
+  });
+
+  el.innerHTML = categorias.map(cat => `
+    <div class="habito-grupo">
+      <div class="section-label">${escHtml(cat)}</div>
+      ${grupos[cat].map(habitoRowHtml).join('')}
+    </div>
+  `).join('');
+}
+
+function habitoRowHtml(h) {
+  const s = h.status_hoje;
+  const corClasse = status => status === 'FEITO' ? 'cor-feito' : status === 'NAO_FEITO' ? 'cor-nao-feito' : 'cor-anulado';
+  const botao = (status, icone, titulo) => `<button
+      class="btn-habito-status ${s === status ? 'ativo ' + corClasse(status) : ''}"
+      onclick="marcarHabito('${h.id}','${status}')"
+      title="${titulo}"
+      aria-label="${titulo}"
+    >${icone}</button>`;
+
+  return `<div class="habito-row">
+    <div class="habito-nome">${escHtml(h.nome)}</div>
+    <div class="habito-actions">
+      ${botao('FEITO', '✓', 'Feito')}
+      ${botao('NAO_FEITO', '✗', 'Não feito')}
+      ${botao('ANULADO', '⊘', 'Anular')}
+    </div>
+    <button class="btn-icon-ghost" onclick="abrirModalHabito('${h.id}')" aria-label="Editar hábito">✎</button>
+    <button class="btn-icon-ghost" onclick="excluirHabito('${h.id}')" aria-label="Excluir hábito">🗑</button>
+  </div>`;
+}
+
+/* ── Marcar / trocar / reverter status do dia (RN-06: sem máquina de
+   estados — clicar no status já ativo reverte pra PENDENTE; clicar em
+   outro troca direto, sem validação de transição) ── */
+async function marcarHabito(id, statusAlvo) {
+  const habito = habitosCache.find(h => h.id === id);
+  if (!habito) return;
+
+  const novoStatus = habito.status_hoje === statusAlvo ? 'PENDENTE' : statusAlvo;
+
+  try {
+    const res = await fetch(`${API}/habitos/${id}/registro-diario`, {
+      method: 'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ status: novoStatus }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    const atualizado = await res.json();
+    const idx = habitosCache.findIndex(h => h.id === id);
+    if (idx >= 0) habitosCache[idx] = atualizado;
+    renderHabitos();
+    atualizarHeaderHabitos();
+  } catch {
+    toast('Erro ao atualizar hábito');
+  }
+}
+
+/* ── Modal de criar/editar hábito (F7) ── */
+function abrirModalHabito(id = null) {
+  habitoEditandoId = id;
+  const titulo = document.getElementById('modal-titulo-habito');
+  const btn = document.getElementById('habito-form-submit');
+  const aviso = document.getElementById('habito-edit-aviso');
+  const form = document.getElementById('habito-form');
+
+  if (id) {
+    const h = habitosCache.find(x => x.id === id);
+    titulo.textContent = 'Editar hábito';
+    document.getElementById('habito-nome').value = h ? h.nome : '';
+    document.getElementById('habito-categoria').value = (h && h.categoria) || '';
+    btn.textContent = 'Salvar';
+    aviso.style.display = '';
+  } else {
+    titulo.textContent = 'Novo hábito';
+    form.reset();
+    btn.textContent = 'Adicionar';
+    aviso.style.display = 'none';
+  }
+
+  document.getElementById('modal-backdrop-habito').classList.add('open');
+  setTimeout(() => document.getElementById('habito-nome').focus(), 200);
+}
+
+function fecharModalHabito() {
+  document.getElementById('modal-backdrop-habito').classList.remove('open');
+  habitoEditandoId = null;
+}
+
+document.getElementById('habito-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('habito-form-submit');
+  const nome = document.getElementById('habito-nome').value.trim();
+  const categoria = document.getElementById('habito-categoria').value.trim() || null;
+
+  btn.disabled = true;
+
+  try {
+    const editando = habitoEditandoId;
+    const res = editando
+      ? await fetch(`${API}/habitos/${editando}`, {
+          method: 'PATCH',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ nome, categoria }),
+        })
+      : await fetch(`${API}/habitos`, {
+          method: 'POST',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ nome, categoria }),
+        });
+
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    const habito = await res.json();
+
+    if (editando) {
+      const idx = habitosCache.findIndex(h => h.id === editando);
+      if (idx >= 0) habitosCache[idx] = habito;
+    } else {
+      habitosCache.push(habito);
+    }
+
+    renderHabitos();
+    atualizarHeaderHabitos();
+    toast(editando ? 'Hábito atualizado ✓' : `${nome} adicionado ✓`);
+    fecharModalHabito();
+  } catch {
+    toast('Erro ao salvar hábito');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ── Exclusão com confirmação (F8 — confirm() nativo, sem padrão prévio
+   de modal de exclusão no app pra reaproveitar) ── */
+async function excluirHabito(id) {
+  const h = habitosCache.find(x => x.id === id);
+  if (!h) return;
+  if (!confirm(`Excluir "${h.nome}"? Essa ação não pode ser desfeita.`)) return;
+
+  try {
+    const res = await fetch(`${API}/habitos/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok && res.status !== 204) throw new Error();
+    habitosCache = habitosCache.filter(x => x.id !== id);
+    renderHabitos();
+    atualizarHeaderHabitos();
+    toast('Hábito excluído');
+  } catch {
+    toast('Erro ao excluir hábito');
+  }
+}
+
+/* ── Calendário (F6) — segundo nível de lazy-load: só carrega quando o
+   usuário abre essa sub-seção, mesmo com o card de Hábitos já aberto ── */
+function toggleCalendario() {
+  const wrap = document.getElementById('habitos-calendario');
+  const btn = document.getElementById('btn-toggle-calendario');
+  const aberto = wrap.classList.toggle('open');
+  btn.textContent = aberto ? 'Ocultar calendário ▴' : 'Ver calendário ▾';
+
+  if (aberto && !calendarioIniciado) {
+    calendarioIniciado = true;
+    carregarCalendario();
+  }
+}
+
+function isoDeData(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+async function carregarCalendario() {
+  const grid = document.getElementById('calendario-grid');
+  grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  const ate = dataISOHoje();
+  const desdeDt = new Date();
+  desdeDt.setDate(desdeDt.getDate() - 34); // últimos 35 dias, inclusive hoje
+  const desde = isoDeData(desdeDt);
+
+  try {
+    const res = await fetch(`${API}/habitos/calendario?desde=${desde}&ate=${ate}`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    const dias = await res.json();
+    renderCalendario(desde, ate, dias);
+  } catch {
+    grid.innerHTML = '<div class="empty">Não foi possível carregar o calendário.</div>';
+  }
+}
+
+function renderCalendario(desde, ate, dias) {
+  const porData = {};
+  dias.forEach(d => { porData[d.data] = d.classificacao; });
+
+  const grid = document.getElementById('calendario-grid');
+  const cursor = new Date(`${desde}T00:00:00`);
+  const fim = new Date(`${ate}T00:00:00`);
+  const celulas = [];
+
+  while (cursor <= fim) {
+    const iso = isoDeData(cursor);
+    const classificacao = porData[iso];
+    const cls = classificacao ? classificacao.toLowerCase() : 'aberto';
+    const labelData = cursor.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const labelStatus = classificacao ? ` — ${classificacao}` : ehHoje(iso) ? ' — hoje' : ' — ainda não fechado';
+    celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}"></div>`);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  grid.innerHTML = celulas.join('');
+}
 
 /* ── PWA: registra o service worker (necessário pra virar instalável) ── */
 if ('serviceWorker' in navigator) {
