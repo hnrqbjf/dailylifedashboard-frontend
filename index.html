@@ -327,19 +327,6 @@
   .status-readonly.pendente { background: var(--pendente-bg); color: var(--pendente); }
   .status-readonly.nao      { background: var(--nao-bg);      color: var(--nao);      }
 
-  /* ── Destaque de streak, centralizado, no topo do card ── */
-  .streak-destaque {
-    text-align: center;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 16px;
-  }
-  .streak-destaque strong {
-    font-size: 1.3rem;
-    color: var(--accent);
-  }
-
   /* ── Hábitos: linha por hábito ── */
   .habito-grupo { margin-bottom: 14px; }
   .habito-grupo:last-child { margin-bottom: 0; }
@@ -683,8 +670,6 @@
     </div>
 
     <div class="card-body" id="habitos-body">
-      <div class="streak-destaque" id="streak-destaque"></div>
-
       <div class="list-header">
         <span class="section-label" style="margin-bottom:0">Seus hábitos</span>
         <button class="btn-icon-add" aria-label="Adicionar hábito" onclick="abrirModalHabito()">+</button>
@@ -1162,23 +1147,17 @@ async function carregarHabitosLista() {
    nunca pelo backend) ── */
 function atualizarHeaderHabitos() {
   const badge = document.getElementById('habitos-header-badges');
+  const espacoMaior = '   '; // espaço maior que um espaço normal (nbsp não colapsa)
   const total = habitosCache.length;
-  if (total === 0) {
-    badge.textContent = streakAtual ? `🔥 ${streakAtual}` : '';
-  } else {
+
+  let texto = `🔥 Seu streak atual: ${streakAtual}`;
+  if (total > 0) {
     const feitos = habitosCache.filter(h => h.status_hoje === 'FEITO').length;
     const anulados = habitosCache.filter(h => h.status_hoje === 'ANULADO').length;
     const y = total - anulados;
-    badge.textContent = `🔥 ${streakAtual} · ${feitos}/${y} hoje`;
+    texto += `${espacoMaior}${feitos}/${y}${espacoMaior}hoje`;
   }
-  atualizarStreakDestaque();
-}
-
-/* ── Destaque centralizado da streak, no topo do card ── */
-function atualizarStreakDestaque() {
-  const el = document.getElementById('streak-destaque');
-  const triste = streakAtual === 0 ? ' 😢' : '';
-  el.innerHTML = `Seu streak atual é: <strong>${streakAtual}</strong>!${triste}`;
+  badge.textContent = texto;
 }
 
 /* ── Renderização, agrupada por categoria (client-side, RN-22) ── */
@@ -1274,7 +1253,7 @@ function abrirOpcoesHabito(id) {
     return `<button
         class="opcao-btn ${ativo ? 'ativo ' + corClasseStatus(status) : ''}"
         onclick="fecharOpcoesHabito(); marcarHabito('${h.id}','${status}');"
-      ><span class="opcao-icone">${icone}</span>${titulo}${ativo ? ' (reverter p/ pendente)' : ''}</button>`;
+      ><span class="opcao-icone">${icone}</span>${titulo}</button>`;
   };
 
   document.getElementById('opcoes-lista').innerHTML = `
