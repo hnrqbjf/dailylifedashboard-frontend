@@ -327,6 +327,19 @@
   .status-readonly.pendente { background: var(--pendente-bg); color: var(--pendente); }
   .status-readonly.nao      { background: var(--nao-bg);      color: var(--nao);      }
 
+  /* ── Destaque de streak, centralizado, no topo do card ── */
+  .streak-destaque {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  .streak-destaque strong {
+    font-size: 1.3rem;
+    color: var(--accent);
+  }
+
   /* ── Hábitos: linha por hábito ── */
   .habito-grupo { margin-bottom: 14px; }
   .habito-grupo:last-child { margin-bottom: 0; }
@@ -338,7 +351,7 @@
     padding: 10px 10px 10px 14px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     margin-bottom: 8px;
   }
   .habito-row:last-child { margin-bottom: 0; }
@@ -353,44 +366,70 @@
     text-overflow: ellipsis;
   }
 
-  .habito-actions { display: flex; align-items: center; gap: 4px; }
-
-  .btn-habito-status {
+  /* ── Chip de status atual (só leitura — a ação fica dentro de "Opções") ── */
+  .habito-status-chip {
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .2px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    color: var(--muted);
+    background: var(--border);
+  }
+  .habito-status-chip.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   }
+  .habito-status-chip.cor-nao-feito { background: var(--nao-bg);      color: var(--nao);      }
+  .habito-status-chip.cor-anulado   { background: var(--anulado-bg); color: var(--anulado); }
+
+  /* ── Botão único "Opções" — abre a folha com marcação/editar/excluir ── */
+  .btn-opcoes {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
     border: 1px solid var(--border);
     background: transparent;
     color: var(--muted);
     border-radius: 8px;
-    font-size: .85rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity .12s, transform .1s;
-  }
-  .btn-habito-status:active { transform: scale(.92); }
-  .btn-habito-status.ativo.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   border-color: transparent; }
-  .btn-habito-status.ativo.cor-nao-feito { background: var(--nao-bg);      color: var(--nao);      border-color: transparent; }
-  .btn-habito-status.ativo.cor-anulado   { background: var(--anulado-bg); color: var(--anulado); border-color: transparent; }
-
-  .btn-icon-ghost {
-    flex-shrink: 0;
-    width: 26px;
-    height: 26px;
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    border-radius: 7px;
-    font-size: .85rem;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: background .12s, color .12s;
   }
-  .btn-icon-ghost:hover { background: var(--accent-bg); color: var(--accent); }
+  .btn-opcoes:hover { background: var(--accent-bg); color: var(--accent); }
+
+  /* ── Folha de opções (marcar status / editar / excluir) ── */
+  .opcoes-lista { display: flex; flex-direction: column; gap: 8px; }
+
+  .opcao-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: opacity .12s, transform .1s;
+  }
+  .opcao-btn:active { transform: scale(.98); }
+  .opcao-btn .opcao-icone { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+
+  .opcao-btn.ativo.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   border-color: transparent; }
+  .opcao-btn.ativo.cor-nao-feito { background: var(--nao-bg);      color: var(--nao);      border-color: transparent; }
+  .opcao-btn.ativo.cor-anulado   { background: var(--anulado-bg); color: var(--anulado); border-color: transparent; }
+  .opcao-btn.perigo { color: var(--nao); }
+
+  .opcao-divider { height: 1px; background: var(--border); margin: 6px 2px; }
 
   /* ── Calendário de Hábitos ── */
   .btn-toggle-calendario {
@@ -417,11 +456,17 @@
     aspect-ratio: 1;
     border-radius: 5px;
     background: var(--anulado-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .62rem;
+    font-weight: 700;
+    color: #fff;
   }
   .cal-dia.cal-concluido { background: var(--tomado); }
   .cal-dia.cal-quebrado  { background: var(--nao); }
   .cal-dia.cal-neutro    { background: var(--anulado); }
-  .cal-dia.cal-aberto    { background: transparent; border: 1px dashed var(--border); }
+  .cal-dia.cal-aberto    { background: transparent; border: 1px dashed var(--border); color: var(--muted); }
 
   .cal-legenda {
     display: flex;
@@ -638,6 +683,8 @@
     </div>
 
     <div class="card-body" id="habitos-body">
+      <div class="streak-destaque" id="streak-destaque"></div>
+
       <div class="list-header">
         <span class="section-label" style="margin-bottom:0">Seus hábitos</span>
         <button class="btn-icon-add" aria-label="Adicionar hábito" onclick="abrirModalHabito()">+</button>
@@ -703,6 +750,17 @@
       <p class="field-aviso" id="habito-edit-aviso" style="display:none">A alteração vale a partir de hoje — dias já fechados não mudam.</p>
       <button class="btn-add" type="submit" id="habito-form-submit">Adicionar</button>
     </form>
+  </div>
+</div>
+
+<!-- Modal: Opções do hábito (marcar status / editar / excluir) -->
+<div class="modal-backdrop" id="modal-backdrop-opcoes" onclick="fecharModalSeFundo(event, 'modal-backdrop-opcoes', fecharOpcoesHabito)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-opcoes">
+    <div class="modal-header">
+      <h2 id="modal-titulo-opcoes">Opções</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharOpcoesHabito()">×</button>
+    </div>
+    <div class="opcoes-lista" id="opcoes-lista"></div>
   </div>
 </div>
 
@@ -1107,12 +1165,20 @@ function atualizarHeaderHabitos() {
   const total = habitosCache.length;
   if (total === 0) {
     badge.textContent = streakAtual ? `🔥 ${streakAtual}` : '';
-    return;
+  } else {
+    const feitos = habitosCache.filter(h => h.status_hoje === 'FEITO').length;
+    const anulados = habitosCache.filter(h => h.status_hoje === 'ANULADO').length;
+    const y = total - anulados;
+    badge.textContent = `🔥 ${streakAtual} · ${feitos}/${y} hoje`;
   }
-  const feitos = habitosCache.filter(h => h.status_hoje === 'FEITO').length;
-  const anulados = habitosCache.filter(h => h.status_hoje === 'ANULADO').length;
-  const y = total - anulados;
-  badge.textContent = `🔥 ${streakAtual} · ${feitos}/${y} hoje`;
+  atualizarStreakDestaque();
+}
+
+/* ── Destaque centralizado da streak, no topo do card ── */
+function atualizarStreakDestaque() {
+  const el = document.getElementById('streak-destaque');
+  const triste = streakAtual === 0 ? ' 😢' : '';
+  el.innerHTML = `Seu streak atual é: <strong>${streakAtual}</strong>!${triste}`;
 }
 
 /* ── Renderização, agrupada por categoria (client-side, RN-22) ── */
@@ -1145,25 +1211,26 @@ function renderHabitos() {
   `).join('');
 }
 
+function corClasseStatus(status) {
+  if (status === 'FEITO') return 'cor-feito';
+  if (status === 'NAO_FEITO') return 'cor-nao-feito';
+  if (status === 'ANULADO') return 'cor-anulado';
+  return '';
+}
+
+function labelStatusHabito(status) {
+  if (status === 'FEITO') return 'Feito';
+  if (status === 'NAO_FEITO') return 'Não feito';
+  if (status === 'ANULADO') return 'Anulado';
+  return 'Pendente';
+}
+
 function habitoRowHtml(h) {
   const s = h.status_hoje;
-  const corClasse = status => status === 'FEITO' ? 'cor-feito' : status === 'NAO_FEITO' ? 'cor-nao-feito' : 'cor-anulado';
-  const botao = (status, icone, titulo) => `<button
-      class="btn-habito-status ${s === status ? 'ativo ' + corClasse(status) : ''}"
-      onclick="marcarHabito('${h.id}','${status}')"
-      title="${titulo}"
-      aria-label="${titulo}"
-    >${icone}</button>`;
-
   return `<div class="habito-row">
     <div class="habito-nome">${escHtml(h.nome)}</div>
-    <div class="habito-actions">
-      ${botao('FEITO', '✓', 'Feito')}
-      ${botao('NAO_FEITO', '✗', 'Não feito')}
-      ${botao('ANULADO', '⊘', 'Anular')}
-    </div>
-    <button class="btn-icon-ghost" onclick="abrirModalHabito('${h.id}')" aria-label="Editar hábito">✎</button>
-    <button class="btn-icon-ghost" onclick="excluirHabito('${h.id}')" aria-label="Excluir hábito">🗑</button>
+    <span class="habito-status-chip ${corClasseStatus(s)}">${labelStatusHabito(s)}</span>
+    <button class="btn-opcoes" onclick="abrirOpcoesHabito('${h.id}')" aria-label="Opções de ${escHtml(h.nome)}">⋯</button>
   </div>`;
 }
 
@@ -1192,6 +1259,38 @@ async function marcarHabito(id, statusAlvo) {
   } catch {
     toast('Erro ao atualizar hábito');
   }
+}
+
+/* ── Folha de opções: marcar status / editar / excluir, tudo atrás de um
+   único botão "⋯" por hábito ── */
+function abrirOpcoesHabito(id) {
+  const h = habitosCache.find(x => x.id === id);
+  if (!h) return;
+
+  document.getElementById('modal-titulo-opcoes').textContent = h.nome;
+
+  const opcaoStatus = (status, icone, titulo) => {
+    const ativo = h.status_hoje === status;
+    return `<button
+        class="opcao-btn ${ativo ? 'ativo ' + corClasseStatus(status) : ''}"
+        onclick="fecharOpcoesHabito(); marcarHabito('${h.id}','${status}');"
+      ><span class="opcao-icone">${icone}</span>${titulo}${ativo ? ' (reverter p/ pendente)' : ''}</button>`;
+  };
+
+  document.getElementById('opcoes-lista').innerHTML = `
+    ${opcaoStatus('FEITO', '✓', 'Feito')}
+    ${opcaoStatus('NAO_FEITO', '✗', 'Não feito')}
+    ${opcaoStatus('ANULADO', '⊘', 'Anular')}
+    <div class="opcao-divider"></div>
+    <button class="opcao-btn" onclick="fecharOpcoesHabito(); abrirModalHabito('${h.id}');"><span class="opcao-icone">✎</span>Editar</button>
+    <button class="opcao-btn perigo" onclick="fecharOpcoesHabito(); excluirHabito('${h.id}');"><span class="opcao-icone">🗑</span>Excluir</button>
+  `;
+
+  document.getElementById('modal-backdrop-opcoes').classList.add('open');
+}
+
+function fecharOpcoesHabito() {
+  document.getElementById('modal-backdrop-opcoes').classList.remove('open');
 }
 
 /* ── Modal de criar/editar hábito (F7) ── */
@@ -1345,7 +1444,8 @@ function renderCalendario(desde, ate, dias) {
     const cls = classificacao ? classificacao.toLowerCase() : 'aberto';
     const labelData = cursor.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     const labelStatus = classificacao ? ` — ${classificacao}` : ehHoje(iso) ? ' — hoje' : ' — ainda não fechado';
-    celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}"></div>`);
+    const diaVisivel = String(cursor.getDate()).padStart(2, '0');
+    celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}">${diaVisivel}</div>`);
     cursor.setDate(cursor.getDate() + 1);
   }
 
