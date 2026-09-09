@@ -515,6 +515,74 @@
   .cal-dot.cal-quebrado  { background: var(--nao); }
   .cal-dot.cal-neutro    { background: var(--anulado); }
 
+  /* ══ Consumo de água ══
+     É o único módulo com uma grandeza contínua a mostrar, por isso é o único
+     que usa um anel de progresso em vez de chips/linhas. O anel para
+     visualmente em 100%, mas o número no centro continua subindo acima disso
+     (ultrapassar a meta é permitido e o excedente é preservado). */
+  .agua-topo { display: flex; justify-content: center; padding: 4px 0 16px; }
+
+  .agua-anel-wrap { position: relative; width: 168px; height: 168px; }
+
+  .agua-anel { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .agua-anel circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+  .anel-trilha { stroke: var(--border); }
+  .anel-progresso {
+    stroke: var(--accent);
+    transition: stroke-dashoffset .35s ease-out, stroke .2s;
+  }
+  .anel-progresso.batida { stroke: var(--tomado); }
+
+  .agua-centro {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    pointer-events: none;
+  }
+  .agua-total { font-size: 1.45rem; font-weight: 700; letter-spacing: -.5px; }
+  .agua-meta-label { font-size: .78rem; color: var(--muted); font-weight: 500; }
+  .agua-pct { font-size: .78rem; font-weight: 700; color: var(--accent); margin-top: 3px; }
+  .agua-pct.batida { color: var(--tomado); }
+
+  /* Volumes fixos no código — qualquer outro valor passa pelo campo personalizado */
+  .agua-botoes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .btn-agua {
+    border: 1px solid var(--border);
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-radius: 12px;
+    padding: 14px 6px;
+    font-family: inherit;
+    font-size: .95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .12s, transform .1s;
+  }
+  .btn-agua:hover:not(:disabled) { opacity: .85; }
+  .btn-agua:active { transform: scale(.96); }
+  .btn-agua:disabled { opacity: .45; cursor: default; }
+
+  .agua-acoes { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+  .agua-link {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .agua-link:hover { color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .anel-progresso, .btn-agua { transition: none; }
+  }
+
   /* ── Formulário ── */
   .form-row { display: flex; flex-direction: column; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 5px; }
@@ -746,21 +814,55 @@
     </div>
   </div>
 
-  <!-- ═══════════════ Card: Consumo de água (ainda não implementado) ═══════════════ -->
-  <div class="card card-em-breve" id="card-agua">
+  <!-- ═══════════════ Card: Consumo de água ═══════════════ -->
+  <div class="card" id="card-agua">
     <div class="card-header" role="button" tabindex="0" aria-expanded="false"
          onclick="toggleCard('agua')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('agua');}">
       <span class="card-icone">💧</span>
       <span class="card-nome">Consumo de água</span>
-      <span class="card-sub">Em breve</span>
+      <span class="card-sub" id="agua-header-badges"></span>
       <span class="chevron">▾</span>
     </div>
-    <div class="card-body">
-      <div class="empty">
-        <span class="icon">💧</span>
-        Módulo ainda não implementado.<br>
-        <small>Entra pelo mesmo fluxo: PRD → Critérios de Aceite → Spec Técnica → Plano.</small>
+
+    <div class="card-body" id="agua-body">
+      <div id="agua-estado"><div class="loading"><div class="spinner"></div></div></div>
+
+      <div id="agua-conteudo" style="display:none">
+        <div class="agua-topo">
+          <div class="agua-anel-wrap">
+            <svg class="agua-anel" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="anel-trilha" cx="60" cy="60" r="52"></circle>
+              <circle class="anel-progresso" id="agua-anel-progresso" cx="60" cy="60" r="52"></circle>
+            </svg>
+            <div class="agua-centro" role="status" aria-live="polite">
+              <span class="agua-total" id="agua-total">0 ml</span>
+              <span class="agua-meta-label" id="agua-meta-label">de 2 L</span>
+              <span class="agua-pct" id="agua-pct">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="agua-botoes">
+          <button class="btn-agua" onclick="registrarAgua(200)">+200 ml</button>
+          <button class="btn-agua" onclick="registrarAgua(480)">+480 ml</button>
+          <button class="btn-agua" onclick="registrarAgua(1000)">+1 L</button>
+        </div>
+
+        <div class="agua-acoes">
+          <button class="agua-link" onclick="abrirModalAgua('outro')">Outro valor</button>
+          <button class="agua-link" onclick="abrirModalAgua('ajuste')">Ajustar total de hoje</button>
+          <button class="agua-link" onclick="abrirModalAgua('meta')">Editar meta</button>
+        </div>
+
+        <button class="btn-toggle-calendario" id="btn-toggle-calendario-agua" onclick="toggleCalendarioAgua()">Ver calendário ▾</button>
+        <div class="calendario-wrap" id="agua-calendario">
+          <div class="cal-grid" id="calendario-agua-grid"></div>
+          <div class="cal-legenda">
+            <span><i class="cal-dot cal-concluido"></i> Meta atingida</span>
+            <span><i class="cal-dot cal-quebrado"></i> Meta não atingida</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -855,6 +957,29 @@
   </div>
 </div>
 
+<!-- Modal: Consumo de água — um só modal para os três casos (outro valor,
+     ajustar total de hoje, editar meta), trocando rótulo/aviso/ação. Três
+     modais quase idênticos seriam repetição sem ganho. -->
+<div class="modal-backdrop" id="modal-backdrop-agua" onclick="fecharModalSeFundo(event, 'modal-backdrop-agua', fecharModalAgua)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-agua">
+    <div class="modal-header">
+      <h2 id="modal-titulo-agua">Outro valor</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalAgua()">×</button>
+    </div>
+    <form id="agua-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="agua-input" id="agua-input-label">Volume (ml)</label>
+        <!-- type="text" + inputmode="decimal" de propósito: em type="number" o
+             separador decimal depende do locale do navegador e "2,5" pode voltar
+             como string vazia. Aqui a vírgula é tratada no JS. -->
+        <input id="agua-input" type="text" inputmode="decimal" required>
+      </div>
+      <p class="field-aviso" id="agua-form-aviso"></p>
+      <button class="btn-add" type="submit" id="agua-form-submit">Registrar</button>
+    </form>
+  </div>
+</div>
+
 <!-- Modal: Opções do hábito (marcar status / editar / excluir) -->
 <div class="modal-backdrop" id="modal-backdrop-opcoes" onclick="fecharModalSeFundo(event, 'modal-backdrop-opcoes', fecharOpcoesHabito)">
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-opcoes">
@@ -942,7 +1067,7 @@ function fecharModalSeFundo(e, backdropId, fecharFn) {
 const cardState = {
   medicamentos: { iniciado: false, open: false, init: initMedicamentos },
   habitos:      { iniciado: false, open: false, init: initHabitos },
-  agua:         { iniciado: false, open: false, init: null },
+  agua:         { iniciado: false, open: false, init: initAgua },
   contas:       { iniciado: false, open: false, init: null },
   tasks:        { iniciado: false, open: false, init: null },
 };
@@ -1560,6 +1685,285 @@ function renderCalendario(desde, ate, dias) {
     const labelStatus = classificacao ? ` — ${classificacao}` : ehHoje(iso) ? ' — hoje' : ' — ainda não fechado';
     const diaVisivel = String(cursor.getDate()).padStart(2, '0');
     celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}">${diaVisivel}</div>`);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  grid.innerHTML = celulas.join('');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CONSUMO DE ÁGUA
+   ══════════════════════════════════════════════════════════════════ */
+
+/* r=52 no viewBox 120x120 — a circunferência é o comprimento total do traço
+   do anel, e é ela que o stroke-dashoffset "esconde" proporcionalmente. */
+const CIRCUNFERENCIA_ANEL = 2 * Math.PI * 52;
+
+let aguaHoje = { data: null, total_ml: 0, meta_ml: 2000, atingiu_meta: false };
+let streakAgua = 0;
+let calendarioAguaIniciado = false;
+let modoModalAgua = 'outro';
+
+/* Litro só existe como formatação de tela — no banco e na API é sempre ml
+   inteiro. 1200 → "1,2 L"; 1250 → "1,25 L"; 2000 → "2 L"; 480 → "480 ml". */
+function formatarVolume(ml) {
+  if (ml >= 1000) {
+    const litros = ml / 1000;
+    const casas = ml % 1000 === 0 ? 0 : (ml % 100 === 0 ? 1 : 2);
+    return `${litros.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })} L`;
+  }
+  return `${ml} ml`;
+}
+
+/* ── Init (só roda na primeira expansão do card) ── */
+async function initAgua() {
+  await Promise.all([carregarStreakAgua(), carregarAguaHoje()]);
+}
+
+async function carregarStreakAgua() {
+  try {
+    const res = await fetch(`${API}/agua/streak`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    streakAgua = (await res.json()).streak_atual;
+    atualizarHeaderAgua();
+  } catch {
+    // silencioso — o header simplesmente não mostra a streak; o estado do dia
+    // ainda carrega normalmente.
+  }
+}
+
+async function carregarAguaHoje() {
+  const estado = document.getElementById('agua-estado');
+  const conteudo = document.getElementById('agua-conteudo');
+  estado.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  estado.style.display = '';
+  conteudo.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/agua`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    aguaHoje = await res.json();
+    estado.style.display = 'none';
+    conteudo.style.display = '';
+    renderAgua();
+  } catch {
+    estado.innerHTML =
+      `<div class="empty"><span class="icon">⚠️</span>Não foi possível conectar ao servidor.<br><small>Verifique sua conexão e tente recarregar a página.</small></div>`;
+  }
+}
+
+/* ── Renderização do anel e dos números ── */
+function renderAgua() {
+  const { total_ml, meta_ml, atingiu_meta } = aguaHoje;
+
+  // Percentual é calculado aqui, nunca armazenado — mesmo princípio do
+  // "X de Y" de Hábitos. Já `atingiu_meta` vem do servidor de propósito:
+  // é a mesma comparação que classifica o dia no fechamento.
+  const pct = meta_ml > 0 ? Math.round((total_ml / meta_ml) * 100) : 0;
+  const preenchimento = Math.min(pct, 100); // o anel para em 100%, o número não
+
+  const anel = document.getElementById('agua-anel-progresso');
+  anel.style.strokeDasharray = CIRCUNFERENCIA_ANEL.toFixed(2);
+  anel.style.strokeDashoffset = (CIRCUNFERENCIA_ANEL * (1 - preenchimento / 100)).toFixed(2);
+  anel.classList.toggle('batida', atingiu_meta);
+
+  document.getElementById('agua-total').textContent = formatarVolume(total_ml);
+  document.getElementById('agua-meta-label').textContent = `de ${formatarVolume(meta_ml)}`;
+
+  const elPct = document.getElementById('agua-pct');
+  elPct.textContent = `${pct}%`;
+  elPct.classList.toggle('batida', atingiu_meta);
+
+  atualizarHeaderAgua();
+}
+
+function atualizarHeaderAgua() {
+  const badge = document.getElementById('agua-header-badges');
+  const espacoMaior = '      '; // mesmo espaçamento (nbsp) usado no header de Hábitos
+  badge.textContent =
+    `🔥 Seu streak atual: ${streakAgua}${espacoMaior}${formatarVolume(aguaHoje.total_ml)} / ${formatarVolume(aguaHoje.meta_ml)}`;
+}
+
+/* ── Registro pelos botões fixos (200 ml / 480 ml / 1 L) ──
+   Os botões são desabilitados durante a chamada pra um duplo toque não somar
+   duas vezes; a resposta já traz o novo estado, então não há refetch. */
+async function registrarAgua(volumeMl) {
+  const botoes = document.querySelectorAll('.btn-agua');
+  botoes.forEach(b => { b.disabled = true; });
+
+  const batidaAntes = aguaHoje.atingiu_meta;
+
+  try {
+    const res = await fetch(`${API}/agua/registro-diario`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ volume_ml: volumeMl }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    aguaHoje = await res.json();
+    renderAgua();
+    toast(!batidaAntes && aguaHoje.atingiu_meta ? 'Meta de hoje batida 🎉' : `+${formatarVolume(volumeMl)}`);
+  } catch {
+    toast('Erro ao registrar consumo');
+  } finally {
+    botoes.forEach(b => { b.disabled = false; });
+  }
+}
+
+/* ── Modal em três modos ── */
+function abrirModalAgua(modo) {
+  modoModalAgua = modo;
+  const titulo = document.getElementById('modal-titulo-agua');
+  const label = document.getElementById('agua-input-label');
+  const input = document.getElementById('agua-input');
+  const aviso = document.getElementById('agua-form-aviso');
+  const btn = document.getElementById('agua-form-submit');
+
+  if (modo === 'outro') {
+    titulo.textContent = 'Outro valor';
+    label.textContent = 'Volume (ml)';
+    input.value = '';
+    input.placeholder = 'Ex: 350';
+    aviso.textContent = 'Soma ao total de hoje.';
+    btn.textContent = 'Registrar';
+  } else if (modo === 'ajuste') {
+    titulo.textContent = 'Ajustar total de hoje';
+    label.textContent = 'Total de hoje (ml)';
+    input.value = String(aguaHoje.total_ml);
+    input.placeholder = '0';
+    aviso.textContent = 'Define o total do dia — não soma ao que já está registrado. Vale só para hoje.';
+    btn.textContent = 'Salvar';
+  } else {
+    titulo.textContent = 'Editar meta';
+    label.textContent = 'Meta diária (litros)';
+    input.value = String(aguaHoje.meta_ml / 1000).replace('.', ',');
+    input.placeholder = 'Ex: 2,5';
+    aviso.textContent = 'Vale de hoje em diante — dias já fechados mantêm a meta que estava valendo neles.';
+    btn.textContent = 'Salvar';
+  }
+
+  document.getElementById('modal-backdrop-agua').classList.add('open');
+  setTimeout(() => { input.focus(); input.select(); }, 200);
+}
+
+function fecharModalAgua() {
+  document.getElementById('modal-backdrop-agua').classList.remove('open');
+}
+
+document.getElementById('agua-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('agua-form-submit');
+  const bruto = document.getElementById('agua-input').value.trim().replace(',', '.');
+  const numero = Number(bruto);
+
+  if (bruto === '' || !Number.isFinite(numero) || numero < 0) {
+    toast('Informe um número válido');
+    return;
+  }
+
+  let url, metodo, corpo, sucesso;
+
+  if (modoModalAgua === 'outro') {
+    const ml = Math.round(numero);
+    if (ml <= 0) { toast('Informe um volume maior que zero'); return; }
+    url = `${API}/agua/registro-diario`;
+    metodo = 'POST';
+    corpo = { volume_ml: ml };
+    sucesso = `+${formatarVolume(ml)}`;
+  } else if (modoModalAgua === 'ajuste') {
+    url = `${API}/agua/registro-diario`;
+    metodo = 'PATCH';
+    corpo = { total_ml: Math.round(numero) };
+    sucesso = 'Total de hoje atualizado ✓';
+  } else {
+    const ml = Math.round(numero * 1000);
+    if (ml <= 0) { toast('Informe uma meta maior que zero'); return; }
+    url = `${API}/agua/meta`;
+    metodo = 'PATCH';
+    corpo = { meta_ml: ml };
+    sucesso = 'Meta atualizada ✓';
+  }
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(url, {
+      method: metodo,
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(corpo),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    // 422 = fora da faixa aceita pelo contrato (guarda-corpo contra digitação
+    // absurda); vale uma mensagem própria em vez do erro genérico.
+    if (res.status === 422) { toast('Valor fora da faixa permitida'); return; }
+    if (!res.ok) throw new Error();
+    aguaHoje = await res.json();
+    renderAgua();
+    toast(sucesso);
+    fecharModalAgua();
+  } catch {
+    toast('Erro ao salvar');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ── Calendário — segundo nível de lazy-load, igual ao de Hábitos ── */
+function toggleCalendarioAgua() {
+  const wrap = document.getElementById('agua-calendario');
+  const btn = document.getElementById('btn-toggle-calendario-agua');
+  const aberto = wrap.classList.toggle('open');
+  btn.textContent = aberto ? 'Ocultar calendário ▴' : 'Ver calendário ▾';
+
+  if (aberto && !calendarioAguaIniciado) {
+    calendarioAguaIniciado = true;
+    carregarCalendarioAgua();
+  }
+}
+
+async function carregarCalendarioAgua() {
+  const grid = document.getElementById('calendario-agua-grid');
+  grid.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  const ate = dataISOHoje();
+  const desdeDt = new Date();
+  desdeDt.setDate(desdeDt.getDate() - 34); // últimos 35 dias, inclusive hoje
+  const desde = isoDeData(desdeDt);
+
+  try {
+    const res = await fetch(`${API}/agua/calendario?desde=${desde}&ate=${ate}`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    renderCalendarioAgua(desde, ate, await res.json());
+  } catch {
+    grid.innerHTML = '<div class="empty">Não foi possível carregar o calendário.</div>';
+  }
+}
+
+function renderCalendarioAgua(desde, ate, dias) {
+  const porData = {};
+  dias.forEach(d => { porData[d.data] = d; });
+
+  const grid = document.getElementById('calendario-agua-grid');
+  const cursor = new Date(`${desde}T00:00:00`);
+  const fim = new Date(`${ate}T00:00:00`);
+  const celulas = [];
+
+  while (cursor <= fim) {
+    const iso = isoDeData(cursor);
+    const info = porData[iso];
+    // Sem entrada = dia ainda não fechado, ou anterior à ativação do módulo.
+    // Nos dois casos fica sem cor — aqui não existe cinza (não há dia neutro).
+    const cls = info ? info.classificacao.toLowerCase() : 'aberto';
+    const labelData = cursor.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    // O tooltip é onde o snapshot fica visível: cada dia mostra a meta que
+    // estava valendo NELE, não a meta de hoje.
+    const labelStatus = info
+      ? ` — ${formatarVolume(info.total_ml)} de ${formatarVolume(info.meta_ml)}`
+      : (ehHoje(iso) ? ' — hoje, ainda em andamento' : ' — ainda não fechado');
+    celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}">${String(cursor.getDate()).padStart(2, '0')}</div>`);
     cursor.setDate(cursor.getDate() + 1);
   }
 
