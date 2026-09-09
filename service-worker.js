@@ -3,7 +3,11 @@
 // HTML, manifest e ícones); nunca cacheia chamadas à API (essas sempre
 // precisam de dados atuais, nunca uma versão antiga guardada em cache).
 
-const CACHE_NAME = 'dld-shell-v1';
+// Versão do cache: precisa subir a cada mudança no shell (index.html,
+// manifest.json, ícones) — senão o navegador continua servindo a versão
+// antiga guardada. Foi o que aconteceu com a trava de orientação no
+// manifest: sem bump, o PWA instalado seguia lendo o manifest velho.
+const CACHE_NAME = 'dld-shell-v2';
 const SHELL_FILES = [
   './',
   './index.html',

@@ -81,7 +81,7 @@
   }
 
   .shell {
-    max-width: 440px;
+    max-width: 1180px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -93,42 +93,59 @@
   .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px; }
   .header .date { font-size: .875rem; color: var(--muted); font-weight: 500; }
 
-  /* ── Card expansível (Medicamentos e Hábitos) ── */
+  /* ══ Grid de módulos ══
+     Celular pequeno: 1 coluna (cards em linha compacta).
+     Tela média (tablet em pé): 2 colunas, cards quadrados.
+     Cabendo 4 (tablet deitado / desktop): 4 colunas.
+     Tasks e qualquer card expandido ocupam a linha inteira. */
+  .modulos-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    grid-auto-flow: row dense; /* card expandido ocupa a linha toda; os pequenos
+                                  sobem pra preencher o buraco que sobraria */
+  }
+  @media (min-width: 560px)  { .modulos-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1000px) { .modulos-grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .card-tasks,
+  .card.open { grid-column: 1 / -1; }
+
+  /* ── Card expansível ── */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 16px;
     box-shadow: var(--shadow);
     overflow: hidden;
+    transition: box-shadow .15s;
   }
+  .card:not(.open):hover { box-shadow: 0 2px 12px rgba(20,40,80,.12); }
 
+  /* Cabeçalho em modo linha (padrão: celular, e sempre que o card está aberto) */
   .card-header {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    justify-content: space-between;
     gap: 10px;
+    min-height: 60px;
     padding: 16px;
     cursor: pointer;
     user-select: none;
   }
   .card-header:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-  .card-header-title {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    min-width: 0;
+  .card-icone { font-size: 1.25rem; line-height: 1; flex-shrink: 0; }
+  .card-nome { font-size: 1.02rem; font-weight: 700; }
+  .card-sub {
     flex: 1;
-  }
-  .card-header-title .icone { font-size: 1.1rem; }
-  .card-header-title .nome { font-size: 1.05rem; font-weight: 700; }
-  .card-header-sub {
-    font-size: .8rem;
+    text-align: right;
+    font-size: .78rem;
     font-weight: 600;
     color: var(--muted);
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .chevron {
@@ -139,8 +156,36 @@
   }
   .card.open .chevron { transform: rotate(180deg); }
 
-  .card-body { display: none; padding: 0 16px 16px; }
+  /* Cabeçalho em modo "azulejo" quadrado — só em tela média pra cima,
+     e só enquanto o card está fechado */
+  @media (min-width: 560px) {
+    .card:not(.open):not(.card-tasks) { aspect-ratio: 1 / .82; }
+
+    .card:not(.open) .card-header {
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+      gap: 8px;
+    }
+    .card:not(.open) .card-icone { font-size: 1.9rem; }
+    .card:not(.open) .card-nome { font-size: 1.05rem; }
+    .card:not(.open) .card-sub { flex: 0 0 auto; text-align: center; white-space: normal; }
+    .card-tasks:not(.open) .card-header { min-height: 120px; }
+  }
+
+  .card-body { display: none; padding: 0 16px 18px; }
   .card.open .card-body { display: block; }
+
+  /* Em tela larga o card aberto ocupa a linha toda, mas o conteúdo fica
+     centralizado numa largura legível em vez de esticar de ponta a ponta */
+  @media (min-width: 760px) {
+    .card.open .card-body { max-width: 660px; margin: 0 auto; }
+  }
+
+  /* Cards de módulos ainda não implementados */
+  .card-em-breve .card-sub { color: var(--accent); }
+  .card-em-breve:not(.open) { border-style: dashed; }
 
   /* ── Cards de medicamento / linhas de hábito ── */
   .med-card {
@@ -438,6 +483,7 @@
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 5px;
+    max-width: 400px; /* evita quadrados gigantes quando o card está aberto em tela larga */
   }
   .cal-dia {
     aspect-ratio: 1;
@@ -554,6 +600,19 @@
   }
   .btn-close:hover { color: var(--text); }
 
+  /* Em tela larga (tablet deitado / desktop) a folha vira um diálogo
+     centralizado — "bottom sheet" só faz sentido no celular */
+  @media (min-width: 760px) {
+    .modal-backdrop { align-items: center; }
+    .modal-sheet {
+      max-width: 420px;
+      border-radius: 18px;
+      transform: translateY(16px);
+      box-shadow: 0 8px 32px rgba(0,0,0,.24);
+    }
+    .modal-backdrop.open .modal-sheet { transform: translateY(0); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .modal-backdrop, .modal-sheet { transition: none; }
   }
@@ -629,15 +688,16 @@
     <p class="date" id="hoje-label"></p>
   </header>
 
+  <div class="modulos-grid">
+
   <!-- ═══════════════ Card: Medicamentos ═══════════════ -->
   <div class="card" id="card-medicamentos">
     <div class="card-header" role="button" tabindex="0" aria-expanded="false"
          onclick="toggleCard('medicamentos')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('medicamentos');}">
-      <div class="card-header-title">
-        <span class="icone">💊</span>
-        <span class="nome">Medicamentos</span>
-      </div>
+      <span class="card-icone">💊</span>
+      <span class="card-nome">Medicamentos</span>
+      <span class="card-sub" id="medicamentos-header-badges"></span>
       <span class="chevron">▾</span>
     </div>
 
@@ -661,11 +721,9 @@
     <div class="card-header" role="button" tabindex="0" aria-expanded="false"
          onclick="toggleCard('habitos')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('habitos');}">
-      <div class="card-header-title">
-        <span class="icone">🧩</span>
-        <span class="nome">Hábitos</span>
-      </div>
-      <span class="card-header-sub" id="habitos-header-badges"></span>
+      <span class="card-icone">🧩</span>
+      <span class="card-nome">Hábitos</span>
+      <span class="card-sub" id="habitos-header-badges"></span>
       <span class="chevron">▾</span>
     </div>
 
@@ -687,6 +745,65 @@
       </div>
     </div>
   </div>
+
+  <!-- ═══════════════ Card: Consumo de água (ainda não implementado) ═══════════════ -->
+  <div class="card card-em-breve" id="card-agua">
+    <div class="card-header" role="button" tabindex="0" aria-expanded="false"
+         onclick="toggleCard('agua')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('agua');}">
+      <span class="card-icone">💧</span>
+      <span class="card-nome">Consumo de água</span>
+      <span class="card-sub">Em breve</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <div class="empty">
+        <span class="icon">💧</span>
+        Módulo ainda não implementado.<br>
+        <small>Entra pelo mesmo fluxo: PRD → Critérios de Aceite → Spec Técnica → Plano.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Card: Contas a pagar (ainda não implementado) ═══════════════ -->
+  <div class="card card-em-breve" id="card-contas">
+    <div class="card-header" role="button" tabindex="0" aria-expanded="false"
+         onclick="toggleCard('contas')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('contas');}">
+      <span class="card-icone">🧾</span>
+      <span class="card-nome">Contas a pagar</span>
+      <span class="card-sub">Em breve</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <div class="empty">
+        <span class="icon">🧾</span>
+        Módulo ainda não implementado.<br>
+        <small>Entra pelo mesmo fluxo: PRD → Critérios de Aceite → Spec Técnica → Plano.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Card: Tasks — sempre sozinho, largura inteira ═══════════════ -->
+  <div class="card card-em-breve card-tasks" id="card-tasks">
+    <div class="card-header" role="button" tabindex="0" aria-expanded="false"
+         onclick="toggleCard('tasks')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('tasks');}">
+      <span class="card-icone">✅</span>
+      <span class="card-nome">Tasks</span>
+      <span class="card-sub">Em breve</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <div class="empty">
+        <span class="icon">✅</span>
+        Módulo ainda não implementado.<br>
+        <small>Fica sempre sozinho na largura inteira — é o módulo com mais conteúdo por tela.</small>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /.modulos-grid -->
 
 </div>
 
@@ -820,9 +937,14 @@ function fecharModalSeFundo(e, backdropId, fecharFn) {
    módulo. Reabrir depois de minimizado NUNCA dispara um novo fetch —
    só alterna visibilidade (classe "open").
    ══════════════════════════════════════════════════════════════════ */
+/* `init: null` = módulo ainda não implementado (card só mostra "em breve",
+   nenhuma chamada de API acontece nem na primeira expansão). */
 const cardState = {
-  medicamentos: { iniciado: false, open: false },
-  habitos:      { iniciado: false, open: false },
+  medicamentos: { iniciado: false, open: false, init: initMedicamentos },
+  habitos:      { iniciado: false, open: false, init: initHabitos },
+  agua:         { iniciado: false, open: false, init: null },
+  contas:       { iniciado: false, open: false, init: null },
+  tasks:        { iniciado: false, open: false, init: null },
 };
 
 function toggleCard(nomeModulo) {
@@ -836,8 +958,7 @@ function toggleCard(nomeModulo) {
 
   if (state.open && !state.iniciado) {
     state.iniciado = true;
-    if (nomeModulo === 'medicamentos') initMedicamentos();
-    if (nomeModulo === 'habitos') initHabitos();
+    if (state.init) state.init();
   }
 }
 
@@ -955,10 +1076,24 @@ function statusLabel(status) {
   return 'Marcar';
 }
 
+/* ── Indicador do cabeçalho de Medicamentos: quantos já foram tomados hoje.
+   Só faz sentido olhando o dia de hoje — navegando pra trás, o badge some. ── */
+function atualizarHeaderMedicamentos(meds) {
+  const badge = document.getElementById('medicamentos-header-badges');
+  if (!ehHoje(dataVisualizada) || !meds.length) {
+    badge.textContent = '';
+    return;
+  }
+  const tomados = meds.filter(m => m.status_dia === 'TOMADO').length;
+  badge.textContent = `${tomados}/${meds.length} hoje`;
+}
+
 /* ── Renderização ── */
 function renderList(meds) {
   const el = document.getElementById('med-list');
   const hojeSendoVisto = ehHoje(dataVisualizada);
+
+  atualizarHeaderMedicamentos(meds);
 
   if (!meds.length) {
     el.innerHTML = `<div class="empty">

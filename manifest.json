@@ -1,13 +1,13 @@
 {
   "name": "DailyLifeDashboard",
   "short_name": "DLD",
-  "description": "Acompanhamento diário de medicamentos",
+  "description": "Acompanhamento diário de medicamentos, hábitos e outros módulos do dia a dia",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
   "background_color": "#EEF2F8",
   "theme_color": "#2461D9",
-  "orientation": "portrait",
+  "orientation": "any",
   "icons": [
     {
       "src": "icons/icon-192.png",
