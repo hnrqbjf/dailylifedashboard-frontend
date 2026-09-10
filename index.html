@@ -8,6 +8,14 @@
 <meta name="theme-color" content="#2461D9">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
+<script>
+  // Aplica o tema salvo ANTES do primeiro paint. O script principal fica no fim
+  // do body — de lá, a página já teria pintado no tema errado e piscaria.
+  try {
+    var _t = localStorage.getItem('dld_tema');
+    if (_t === 'light' || _t === 'dark') document.documentElement.setAttribute('data-theme', _t);
+  } catch (e) {}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -141,7 +149,26 @@
   .header-marca i:nth-child(2) { opacity: .6; }
   .header-marca i:nth-child(3) { opacity: .75; }
 
-  .header-textos { min-width: 0; }
+  .header-textos { min-width: 0; flex: 1; }
+
+  .btn-tema {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 12px;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    transition: border-color .12s, transform .1s;
+  }
+  .btn-tema:hover { border-color: var(--accent); }
+  .btn-tema:active { transform: scale(.94); }
   .header h1 {
     font-size: 1.4rem;
     font-weight: 700;
@@ -583,12 +610,16 @@
     border-radius: 5px;
     background: var(--anulado-bg);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-size: .62rem;
-    font-weight: 700;
+    line-height: 1.05;
     color: #fff;
   }
+  /* Dia e mês empilhados: a janela de 35 dias cruza dois meses, e sem o mês
+     não dá pra saber a qual deles cada quadradinho pertence. */
+  .cal-num { font-size: .62rem; font-weight: 700; }
+  .cal-mes { font-size: .5rem; font-weight: 600; opacity: .78; }
   .cal-dia.cal-concluido { background: var(--tomado); }
   .cal-dia.cal-quebrado  { background: var(--nao); }
   .cal-dia.cal-neutro    { background: var(--anulado); }
@@ -691,6 +722,22 @@
     margin-bottom: 8px;
   }
   .conta-row:last-child { margin-bottom: 0; }
+
+  /* Conta vencida e ainda em aberto: a linha inteira vira alerta. A barra
+     lateral é box-shadow inset, não border-left, pra não deslocar o conteúdo
+     em relação às linhas normais. */
+  .conta-row.atrasada {
+    background: var(--nao-bg);
+    border-color: var(--nao);
+    box-shadow: inset 4px 0 0 var(--nao);
+  }
+  .conta-row.atrasada .conta-nome  { color: var(--nao); }
+  .conta-row.atrasada .conta-venc  { color: var(--nao); opacity: .9; }
+  .conta-row.atrasada .conta-valor { color: var(--nao); }
+  .conta-row.atrasada .conta-sep   { background: var(--nao); }
+  .conta-row.atrasada .badge-atrasado { background: var(--nao); color: #fff; }
+  .conta-row.atrasada .btn-pagar   { background: var(--nao); color: #fff; }
+  .conta-row.atrasada .btn-opcoes  { border-color: var(--nao); color: var(--nao); }
 
   .conta-info { flex: 1; min-width: 0; }
   .conta-nome {
@@ -984,6 +1031,7 @@
         <span id="hoje-label"></span>
       </p>
     </div>
+    <button class="btn-tema" id="btn-tema" onclick="alternarTema()" type="button">🖥️</button>
   </header>
 
   <div class="modulos-grid">
@@ -1352,6 +1400,46 @@ document.getElementById('hoje-label').textContent = hojeReal.toLocaleDateString(
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
 });
 
+/* ── Tema: sistema → claro → escuro, ciclando no botão do cabeçalho ──
+   O CSS já suportava os três estados desde o início: sem o atributo
+   data-theme vale o prefers-color-scheme do aparelho; com "light" ou "dark"
+   a escolha do usuário vence. Faltava só o controle. */
+const TEMA_STORAGE = 'dld_tema';
+const CICLO_TEMA = ['sistema', 'light', 'dark'];
+const TEMA_ICONE = { sistema: '🖥️', light: '☀️', dark: '🌙' };
+const TEMA_ROTULO = {
+  sistema: 'Tema: seguindo o aparelho — tocar para forçar claro',
+  light: 'Tema: claro — tocar para forçar escuro',
+  dark: 'Tema: escuro — tocar para voltar a seguir o aparelho',
+};
+
+function temaSalvo() {
+  try { return localStorage.getItem(TEMA_STORAGE) || 'sistema'; } catch { return 'sistema'; }
+}
+
+function aplicarTema(tema) {
+  if (tema === 'sistema') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', tema);
+
+  try {
+    if (tema === 'sistema') localStorage.removeItem(TEMA_STORAGE);
+    else localStorage.setItem(TEMA_STORAGE, tema);
+  } catch {
+    // Navegador com armazenamento bloqueado: o tema vale só nesta visita.
+  }
+
+  const btn = document.getElementById('btn-tema');
+  btn.textContent = TEMA_ICONE[tema];
+  btn.title = TEMA_ROTULO[tema];
+  btn.setAttribute('aria-label', TEMA_ROTULO[tema]);
+}
+
+function alternarTema() {
+  aplicarTema(CICLO_TEMA[(CICLO_TEMA.indexOf(temaSalvo()) + 1) % CICLO_TEMA.length]);
+}
+
+aplicarTema(temaSalvo());
+
 /* Saudação pela hora do aparelho — o único texto da tela que muda ao longo
    do dia sem depender de nenhuma chamada à API. */
 document.getElementById('saudacao').textContent =
@@ -1565,7 +1653,7 @@ function atualizarHeaderMedicamentos(meds) {
     return;
   }
   const tomados = meds.filter(m => m.status_dia === 'TOMADO').length;
-  badge.textContent = `${tomados}/${meds.length} hoje`;
+  badge.textContent = `${tomados}/${meds.length}`;
 }
 
 /* ── Renderização ── */
@@ -1770,7 +1858,7 @@ function atualizarHeaderHabitos() {
 
   const feitos = habitosCache.filter(h => h.status_hoje === 'FEITO').length;
   const anulados = habitosCache.filter(h => h.status_hoje === 'ANULADO').length;
-  badge.textContent = `${feitos}/${total - anulados} hoje`;
+  badge.textContent = `${feitos}/${total - anulados}`;
 }
 
 function renderStreakHabitos() {
@@ -2052,7 +2140,8 @@ function renderCalendario(desde, ate, dias) {
     const labelData = cursor.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     const labelStatus = classificacao ? ` — ${classificacao}` : ehHoje(iso) ? ' — hoje' : ' — ainda não fechado';
     const diaVisivel = String(cursor.getDate()).padStart(2, '0');
-    celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}">${diaVisivel}</div>`);
+    const mesCurto = cursor.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}"><span class="cal-num">${diaVisivel}</span><span class="cal-mes">${mesCurto}</span></div>`);
     cursor.setDate(cursor.getDate() + 1);
   }
 
@@ -2338,7 +2427,8 @@ function renderCalendarioAgua(desde, ate, dias) {
     const labelStatus = info
       ? ` — ${formatarVolume(info.total_ml)} de ${formatarVolume(info.meta_ml)}`
       : (ehHoje(iso) ? ' — hoje, ainda em andamento' : ' — ainda não fechado');
-    celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}">${String(cursor.getDate()).padStart(2, '0')}</div>`);
+    const mesCurto = cursor.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    celulas.push(`<div class="cal-dia cal-${cls}" title="${labelData}${labelStatus}"><span class="cal-num">${String(cursor.getDate()).padStart(2, '0')}</span><span class="cal-mes">${mesCurto}</span></div>`);
     cursor.setDate(cursor.getDate() + 1);
   }
 
@@ -2516,7 +2606,7 @@ function contaRowHtml(c) {
     ? `<span class="conta-chip ${c.status === 'PAGO_ATRASADO' ? 'atrasado' : ''}">✓ ${c.status === 'PAGO_ATRASADO' ? 'Pago atrasado' : 'Pago'}</span>`
     : `<button class="btn-pagar" onclick="abrirModalPagamento('${c.id}')">Pagar</button>`;
 
-  return `<div class="conta-row">
+  return `<div class="conta-row${atrasada ? ' atrasada' : ''}">
     <div class="conta-info">
       <div class="conta-nome">${escHtml(c.nome)}</div>
       <div class="conta-meta">${meta}</div>
