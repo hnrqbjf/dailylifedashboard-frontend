@@ -583,6 +583,87 @@
     .anel-progresso, .btn-agua { transition: none; }
   }
 
+  /* ══ Contas a pagar ══
+     Lista cronológica pura por dia de vencimento, sem agrupamento — este é o
+     único módulo sem campo de categoria. O badge de atrasado é o mesmo
+     .badge-atrasado já usado em Medicamentos. */
+  .conta-row {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 10px 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .conta-row:last-child { margin-bottom: 0; }
+
+  .conta-info { flex: 1; min-width: 0; }
+  .conta-nome {
+    font-size: .95rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .conta-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+  }
+  .conta-venc { font-size: .78rem; color: var(--muted); font-weight: 500; }
+  .conta-valor { font-size: .78rem; color: var(--muted); font-weight: 600; }
+  .conta-valor.sem-valor { font-style: italic; opacity: .8; }
+
+  /* Chip de situação — só leitura; a ação fica no botão ao lado */
+  .conta-chip {
+    flex-shrink: 0;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .2px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: var(--tomado-bg);
+    color: var(--tomado);
+    white-space: nowrap;
+  }
+  .conta-chip.atrasado { background: var(--pendente-bg); color: var(--pendente); }
+
+  .btn-pagar {
+    flex-shrink: 0;
+    border: none;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .2px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    transition: opacity .12s, transform .1s;
+  }
+  .btn-pagar:hover:not(:disabled) { opacity: .85; }
+  .btn-pagar:active { transform: scale(.96); }
+  .btn-pagar:disabled { opacity: .45; cursor: default; }
+
+  /* Total do mês, abaixo da lista */
+  .contas-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: .82rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .contas-total strong { font-size: .95rem; color: var(--text); font-weight: 700; }
+
   /* ── Formulário ── */
   .form-row { display: flex; flex-direction: column; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 5px; }
@@ -867,22 +948,28 @@
     </div>
   </div>
 
-  <!-- ═══════════════ Card: Contas a pagar (ainda não implementado) ═══════════════ -->
-  <div class="card card-em-breve" id="card-contas">
+  <!-- ═══════════════ Card: Contas a pagar ═══════════════ -->
+  <div class="card" id="card-contas">
     <div class="card-header" role="button" tabindex="0" aria-expanded="false"
          onclick="toggleCard('contas')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('contas');}">
       <span class="card-icone">🧾</span>
       <span class="card-nome">Contas a pagar</span>
-      <span class="card-sub">Em breve</span>
+      <span class="card-sub" id="contas-header-badges"></span>
       <span class="chevron">▾</span>
     </div>
-    <div class="card-body">
-      <div class="empty">
-        <span class="icon">🧾</span>
-        Módulo ainda não implementado.<br>
-        <small>Entra pelo mesmo fluxo: PRD → Critérios de Aceite → Spec Técnica → Plano.</small>
+
+    <div class="card-body" id="contas-body">
+      <div class="list-header">
+        <div class="date-nav">
+          <button class="nav-btn" id="contas-nav-prev" aria-label="Mês anterior" onclick="navegarMes(-1)">‹</button>
+          <span class="date-label-btn" id="contas-mes-label" style="cursor:default">Este mês</span>
+          <button class="nav-btn" id="contas-nav-next" aria-label="Próximo mês" onclick="navegarMes(1)" disabled>›</button>
+          <button class="btn-hoje" id="contas-btn-atual" onclick="irParaMesAtual()" style="display:none">Mês atual</button>
+        </div>
+        <button class="btn-icon-add" aria-label="Adicionar conta" onclick="abrirModalConta()">+</button>
       </div>
+      <div id="contas-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 
@@ -980,6 +1067,66 @@
   </div>
 </div>
 
+<!-- Modal: Criar/editar conta -->
+<div class="modal-backdrop" id="modal-backdrop-conta" onclick="fecharModalSeFundo(event, 'modal-backdrop-conta', fecharModalConta)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-conta">
+    <div class="modal-header">
+      <h2 id="modal-titulo-conta">Nova conta</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalConta()">×</button>
+    </div>
+    <form id="conta-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="conta-nome">Nome</label>
+        <input id="conta-nome" name="nome" type="text" placeholder="Ex: Aluguel" required>
+      </div>
+      <div class="field">
+        <label for="conta-dia">Dia do vencimento</label>
+        <input id="conta-dia" name="dia" type="number" min="1" max="31" step="1" placeholder="Ex: 10" required>
+        <p class="field-aviso">Todo mês nesse dia. Se o mês não tiver esse dia, vence no último.</p>
+      </div>
+      <div class="field">
+        <label for="conta-valor">Valor (opcional)</label>
+        <input id="conta-valor" name="valor" type="text" inputmode="decimal" placeholder="Ex: 1.850,00">
+      </div>
+      <p class="field-aviso" id="conta-edit-aviso" style="display:none">A alteração vale para os meses ainda em aberto — o que já foi pago não muda.</p>
+      <button class="btn-add" type="submit" id="conta-form-submit">Adicionar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Registrar/corrigir pagamento -->
+<div class="modal-backdrop" id="modal-backdrop-pagamento" onclick="fecharModalSeFundo(event, 'modal-backdrop-pagamento', fecharModalPagamento)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-pagamento">
+    <div class="modal-header">
+      <h2 id="modal-titulo-pagamento">Registrar pagamento</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalPagamento()">×</button>
+    </div>
+    <form id="pagamento-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="pagamento-valor">Valor pago</label>
+        <input id="pagamento-valor" type="text" inputmode="decimal" placeholder="Ex: 1.850,00" required>
+      </div>
+      <div class="field">
+        <label for="pagamento-data">Data do pagamento</label>
+        <input id="pagamento-data" type="date" required>
+      </div>
+      <p class="field-aviso" id="pagamento-aviso"></p>
+      <button class="btn-add" type="submit" id="pagamento-form-submit">Confirmar pagamento</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Opções da conta (corrigir/desfazer pagamento, editar, excluir) -->
+<div class="modal-backdrop" id="modal-backdrop-opcoes-conta" onclick="fecharModalSeFundo(event, 'modal-backdrop-opcoes-conta', fecharOpcoesConta)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-opcoes-conta">
+    <div class="modal-header">
+      <h2 id="modal-titulo-opcoes-conta">Opções</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharOpcoesConta()">×</button>
+    </div>
+    <div class="opcoes-lista" id="opcoes-lista-conta"></div>
+  </div>
+</div>
+
 <!-- Modal: Opções do hábito (marcar status / editar / excluir) -->
 <div class="modal-backdrop" id="modal-backdrop-opcoes" onclick="fecharModalSeFundo(event, 'modal-backdrop-opcoes', fecharOpcoesHabito)">
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-opcoes">
@@ -1068,7 +1215,7 @@ const cardState = {
   medicamentos: { iniciado: false, open: false, init: initMedicamentos },
   habitos:      { iniciado: false, open: false, init: initHabitos },
   agua:         { iniciado: false, open: false, init: initAgua },
-  contas:       { iniciado: false, open: false, init: null },
+  contas:       { iniciado: false, open: false, init: initContas },
   tasks:        { iniciado: false, open: false, init: null },
 };
 
@@ -1968,6 +2115,398 @@ function renderCalendarioAgua(desde, ate, dias) {
   }
 
   grid.innerHTML = celulas.join('');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CONTAS A PAGAR
+   ══════════════════════════════════════════════════════════════════ */
+
+let contasCache = [];
+let competenciaVista = competenciaAtual();
+let contaEditandoId = null;
+let pagamentoContaId = null;
+
+/* ── Dinheiro: centavos inteiros na API, formatação só aqui ── */
+function formatarDinheiro(centavos) {
+  return (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+/* Aceita "1.850,00", "1850,5", "1850" e também "1850.50" — a vírgula, quando
+   existe, define que o ponto é separador de milhar. */
+function parseDinheiro(texto) {
+  let s = String(texto).trim().replace(/[R$\s]/g, '');
+  if (s === '') return null;
+  if (s.includes(',')) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (!/^\d+\.\d{1,2}$/.test(s)) {
+    s = s.replace(/\./g, '');
+  }
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : null;
+}
+
+/* ── Competência: sempre "AAAA-MM" ── */
+function competenciaAtual() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function somarMeses(comp, delta) {
+  const [ano, mes] = comp.split('-').map(Number);
+  const d = new Date(ano, mes - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function rotuloMes(comp) {
+  const [ano, mes] = comp.split('-').map(Number);
+  return new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+}
+
+/* Formata sem passar por new Date(iso): 'new Date("2026-09-10")' é
+   interpretado como UTC e pode voltar o dia anterior no nosso fuso. */
+function dataCurta(iso) {
+  const [, mes, dia] = iso.split('-');
+  return `${dia}/${mes}`;
+}
+
+/* ── Init (só roda na primeira expansão do card) ── */
+function initContas() {
+  atualizarNavMes();
+  carregarContas();
+}
+
+function atualizarNavMes() {
+  const noMesAtual = competenciaVista === competenciaAtual();
+  document.getElementById('contas-mes-label').textContent = noMesAtual ? 'Este mês' : rotuloMes(competenciaVista);
+  document.getElementById('contas-nav-next').disabled = noMesAtual; // sem mês futuro
+  document.getElementById('contas-btn-atual').style.display = noMesAtual ? 'none' : '';
+}
+
+function navegarMes(delta) {
+  const alvo = somarMeses(competenciaVista, delta);
+  if (alvo > competenciaAtual()) return; // nunca navega pro futuro
+  competenciaVista = alvo;
+  atualizarNavMes();
+  carregarContas();
+}
+
+function irParaMesAtual() {
+  competenciaVista = competenciaAtual();
+  atualizarNavMes();
+  carregarContas();
+}
+
+async function carregarContas() {
+  const listEl = document.getElementById('contas-list');
+  listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const res = await fetch(`${API}/contas?competencia=${competenciaVista}`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    contasCache = await res.json();
+    renderContas();
+    atualizarHeaderContas();
+  } catch {
+    listEl.innerHTML =
+      `<div class="empty"><span class="icon">⚠️</span>Não foi possível conectar ao servidor.<br><small>Verifique sua conexão e tente recarregar a página.</small></div>`;
+  }
+}
+
+/* Vencida não é status: é comparação de datas feita aqui, e só vale para
+   ocorrências ainda em aberto. */
+function contaVencida(c) {
+  return c.status === 'PENDENTE' && c.data_vencimento < dataISOHoje();
+}
+
+function atualizarHeaderContas() {
+  const badge = document.getElementById('contas-header-badges');
+
+  // O resumo só faz sentido olhando o mês corrente — navegando pra trás, some.
+  if (competenciaVista !== competenciaAtual() || !contasCache.length) {
+    badge.textContent = '';
+    return;
+  }
+
+  const abertas = contasCache.filter(c => c.status === 'PENDENTE');
+  if (!abertas.length) {
+    badge.textContent = 'Tudo pago ✓';
+    return;
+  }
+
+  const vencidas = abertas.filter(contaVencida).length;
+  const total = abertas.reduce((s, c) => s + (c.valor_centavos || 0), 0);
+  const espacoMaior = '   ';
+
+  const partes = [];
+  if (vencidas) partes.push(`${vencidas} vencida${vencidas > 1 ? 's' : ''}`);
+  partes.push(`${abertas.length} em aberto`);
+  if (total) partes.push(formatarDinheiro(total));
+  badge.textContent = partes.join(`${espacoMaior}·${espacoMaior}`);
+}
+
+/* ── Renderização: lista cronológica pura, sem agrupamento ──
+   A ordem já vem pronta do backend (vencimento, depois nome). */
+function renderContas() {
+  const el = document.getElementById('contas-list');
+
+  if (!contasCache.length) {
+    const noMesAtual = competenciaVista === competenciaAtual();
+    el.innerHTML = `<div class="empty">
+      <span class="icon">🧾</span>
+      ${noMesAtual ? 'Nenhuma conta cadastrada ainda.' : 'Nenhuma conta existia nesse mês.'}
+    </div>`;
+    return;
+  }
+
+  const emAberto = contasCache.filter(c => c.status === 'PENDENTE');
+  const totalAberto = emAberto.reduce((s, c) => s + (c.valor_centavos || 0), 0);
+  const totalPago = contasCache.reduce((s, c) => s + (c.valor_pago_centavos || 0), 0);
+
+  el.innerHTML = contasCache.map(contaRowHtml).join('') + `
+    <div class="contas-total">
+      <span>${emAberto.length ? `Em aberto: <strong>${formatarDinheiro(totalAberto)}</strong>` : 'Tudo pago neste mês ✓'}</span>
+      <span>Pago: <strong>${formatarDinheiro(totalPago)}</strong></span>
+    </div>`;
+}
+
+function contaRowHtml(c) {
+  const paga = c.status !== 'PENDENTE';
+  const atrasada = contaVencida(c);
+
+  const meta = paga
+    ? `<span class="conta-venc">Pago em ${dataCurta(c.pago_em)}</span>
+       <span class="conta-valor">${formatarDinheiro(c.valor_pago_centavos)}</span>`
+    : `<span class="conta-venc">Vence ${dataCurta(c.data_vencimento)}</span>
+       ${c.valor_centavos != null
+          ? `<span class="conta-valor">${formatarDinheiro(c.valor_centavos)}</span>`
+          : '<span class="conta-valor sem-valor">sem valor definido</span>'}
+       ${atrasada ? '<span class="badge-atrasado">Atrasado</span>' : ''}`;
+
+  const acao = paga
+    ? `<span class="conta-chip ${c.status === 'PAGO_ATRASADO' ? 'atrasado' : ''}">✓ ${c.status === 'PAGO_ATRASADO' ? 'Pago atrasado' : 'Pago'}</span>`
+    : `<button class="btn-pagar" onclick="abrirModalPagamento('${c.id}')">Pagar</button>`;
+
+  return `<div class="conta-row">
+    <div class="conta-info">
+      <div class="conta-nome">${escHtml(c.nome)}</div>
+      <div class="conta-meta">${meta}</div>
+    </div>
+    ${acao}
+    <button class="btn-opcoes" onclick="abrirOpcoesConta('${c.id}')" aria-label="Opções de ${escHtml(c.nome)}">⋯</button>
+  </div>`;
+}
+
+/* ── Modal de pagamento: registra e corrige, é a mesma operação (PUT) ── */
+function abrirModalPagamento(id) {
+  const c = contasCache.find(x => x.id === id);
+  if (!c) return;
+  pagamentoContaId = id;
+
+  const paga = c.status !== 'PENDENTE';
+  document.getElementById('modal-titulo-pagamento').textContent = paga ? 'Corrigir pagamento' : 'Registrar pagamento';
+  document.getElementById('pagamento-form-submit').textContent = paga ? 'Salvar' : 'Confirmar pagamento';
+
+  // Valor pago vem sugerido pelo valor de referência, mas é sempre editável —
+  // é assim que multa, reajuste e variação de consumo se resolvem sem mexer
+  // no cadastro.
+  const centavos = paga ? c.valor_pago_centavos : c.valor_centavos;
+  document.getElementById('pagamento-valor').value =
+    centavos != null ? (centavos / 100).toFixed(2).replace('.', ',') : '';
+
+  const input = document.getElementById('pagamento-data');
+  input.value = paga ? c.pago_em : dataISOHoje();
+  input.max = dataISOHoje(); // data futura não é aceita
+
+  document.getElementById('pagamento-aviso').textContent =
+    `${c.nome} · vencimento ${dataCurta(c.data_vencimento)}. Pagamento após o vencimento é registrado como atrasado.`;
+
+  document.getElementById('modal-backdrop-pagamento').classList.add('open');
+  setTimeout(() => document.getElementById('pagamento-valor').focus(), 200);
+}
+
+function fecharModalPagamento() {
+  document.getElementById('modal-backdrop-pagamento').classList.remove('open');
+  pagamentoContaId = null;
+}
+
+document.getElementById('pagamento-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('pagamento-form-submit');
+  const id = pagamentoContaId;
+  if (!id) return;
+
+  const centavos = parseDinheiro(document.getElementById('pagamento-valor').value);
+  const pagoEm = document.getElementById('pagamento-data').value;
+
+  if (centavos === null) { toast('Informe um valor válido'); return; }
+  if (!pagoEm) { toast('Informe a data do pagamento'); return; }
+  if (pagoEm > dataISOHoje()) { toast('A data do pagamento não pode ser futura'); return; }
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/contas/${id}/pagamento`, {
+      method: 'PUT',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        competencia: competenciaVista,
+        valor_pago_centavos: centavos,
+        pago_em: pagoEm,
+        // Sem status no payload: quem decide entre PAGO e PAGO_ATRASADO é o
+        // servidor, comparando a data com o vencimento.
+      }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    const atualizada = await res.json();
+    const idx = contasCache.findIndex(c => c.id === id);
+    if (idx >= 0) contasCache[idx] = atualizada;
+    renderContas();
+    atualizarHeaderContas();
+    toast(atualizada.status === 'PAGO_ATRASADO' ? 'Pago com atraso ✓' : 'Pagamento registrado ✓');
+    fecharModalPagamento();
+  } catch {
+    toast('Erro ao registrar pagamento');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function desfazerPagamento(id) {
+  const c = contasCache.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`Desfazer o pagamento de "${c.nome}"?`)) return;
+
+  try {
+    const res = await fetch(`${API}/contas/${id}/pagamento?competencia=${competenciaVista}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    const atualizada = await res.json();
+    const idx = contasCache.findIndex(x => x.id === id);
+    if (idx >= 0) contasCache[idx] = atualizada;
+    renderContas();
+    atualizarHeaderContas();
+    toast('Pagamento desfeito');
+  } catch {
+    toast('Erro ao desfazer pagamento');
+  }
+}
+
+/* ── Folha de opções por conta ── */
+function abrirOpcoesConta(id) {
+  const c = contasCache.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('modal-titulo-opcoes-conta').textContent = c.nome;
+
+  const paga = c.status !== 'PENDENTE';
+  const acoesPagamento = paga
+    ? `<button class="opcao-btn" onclick="fecharOpcoesConta(); abrirModalPagamento('${c.id}');"><span class="opcao-icone">✎</span>Corrigir pagamento</button>
+       <button class="opcao-btn" onclick="fecharOpcoesConta(); desfazerPagamento('${c.id}');"><span class="opcao-icone">↩</span>Desfazer pagamento</button>`
+    : `<button class="opcao-btn" onclick="fecharOpcoesConta(); abrirModalPagamento('${c.id}');"><span class="opcao-icone">✓</span>Registrar pagamento</button>`;
+
+  document.getElementById('opcoes-lista-conta').innerHTML = `
+    ${acoesPagamento}
+    <div class="opcao-divider"></div>
+    <button class="opcao-btn" onclick="fecharOpcoesConta(); abrirModalConta('${c.id}');"><span class="opcao-icone">⚙</span>Editar conta</button>
+    <button class="opcao-btn perigo" onclick="fecharOpcoesConta(); excluirConta('${c.id}');"><span class="opcao-icone">🗑</span>Excluir conta</button>
+  `;
+
+  document.getElementById('modal-backdrop-opcoes-conta').classList.add('open');
+}
+
+function fecharOpcoesConta() {
+  document.getElementById('modal-backdrop-opcoes-conta').classList.remove('open');
+}
+
+/* ── Modal de cadastro/edição ── */
+function abrirModalConta(id = null) {
+  contaEditandoId = id;
+  const titulo = document.getElementById('modal-titulo-conta');
+  const btn = document.getElementById('conta-form-submit');
+  const aviso = document.getElementById('conta-edit-aviso');
+  const form = document.getElementById('conta-form');
+
+  if (id) {
+    const c = contasCache.find(x => x.id === id);
+    titulo.textContent = 'Editar conta';
+    document.getElementById('conta-nome').value = c ? c.nome : '';
+    document.getElementById('conta-dia').value = c ? c.dia_vencimento : '';
+    document.getElementById('conta-valor').value =
+      c && c.valor_centavos != null ? (c.valor_centavos / 100).toFixed(2).replace('.', ',') : '';
+    btn.textContent = 'Salvar';
+    aviso.style.display = '';
+  } else {
+    titulo.textContent = 'Nova conta';
+    form.reset();
+    btn.textContent = 'Adicionar';
+    aviso.style.display = 'none';
+  }
+
+  document.getElementById('modal-backdrop-conta').classList.add('open');
+  setTimeout(() => document.getElementById('conta-nome').focus(), 200);
+}
+
+function fecharModalConta() {
+  document.getElementById('modal-backdrop-conta').classList.remove('open');
+  contaEditandoId = null;
+}
+
+document.getElementById('conta-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('conta-form-submit');
+  const nome = document.getElementById('conta-nome').value.trim();
+  const dia = Number(document.getElementById('conta-dia').value);
+  const valorBruto = document.getElementById('conta-valor').value.trim();
+
+  if (!nome) { toast('Informe o nome da conta'); return; }
+  if (!Number.isInteger(dia) || dia < 1 || dia > 31) { toast('O dia deve estar entre 1 e 31'); return; }
+
+  const valor = valorBruto === '' ? null : parseDinheiro(valorBruto);
+  if (valorBruto !== '' && valor === null) { toast('Informe um valor válido'); return; }
+
+  btn.disabled = true;
+  try {
+    const editando = contaEditandoId;
+    const corpo = { nome, dia_vencimento: dia, valor_centavos: valor };
+    const res = await fetch(editando ? `${API}/contas/${editando}` : `${API}/contas`, {
+      method: editando ? 'PATCH' : 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(corpo),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+
+    toast(editando ? 'Conta atualizada ✓' : `${nome} adicionada ✓`);
+    fecharModalConta();
+    // Recarrega em vez de remendar o cache: mudar o dia de vencimento reordena
+    // a lista, e criar/editar afeta o vencimento calculado do mês.
+    if (competenciaVista !== competenciaAtual()) irParaMesAtual(); else await carregarContas();
+  } catch {
+    toast('Erro ao salvar conta');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function excluirConta(id) {
+  const c = contasCache.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`Excluir "${c.nome}"? Os pagamentos já registrados continuam no histórico.`)) return;
+
+  try {
+    const res = await fetch(`${API}/contas/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok && res.status !== 204) throw new Error();
+    contasCache = contasCache.filter(x => x.id !== id);
+    renderContas();
+    atualizarHeaderContas();
+    toast('Conta excluída');
+  } catch {
+    toast('Erro ao excluir conta');
+  }
 }
 
 /* ── PWA: registra o service worker (necessário pra virar instalável) ── */
