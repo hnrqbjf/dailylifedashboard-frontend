@@ -12,7 +12,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
+    /* --bg continua sólido de propósito: além do fundo da página, ele é a cor
+       das linhas internas (conta, hábito, medicamento) e dos inputs. O degradê
+       vive numa variável própria, aplicada só ao fundo fixo da página. */
     --bg:        #EEF2F8;
+    --bg-grad:
+      radial-gradient(1100px 620px at 12% -12%, #DCE7FB 0%, transparent 62%),
+      radial-gradient(900px 520px at 102% -4%, #E8E1FB 0%, transparent 58%),
+      linear-gradient(180deg, #F5F8FD 0%, #EEF2F8 46%, #E7EDF7 100%);
     --surface:   #FFFFFF;
     --border:    #D4DCE9;
     --text:      #111827;
@@ -33,6 +40,10 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg:        #0D1219;
+      --bg-grad:
+        radial-gradient(1100px 620px at 12% -12%, #17243C 0%, transparent 62%),
+        radial-gradient(900px 520px at 102% -4%, #1C1838 0%, transparent 58%),
+        linear-gradient(180deg, #101823 0%, #0D1219 48%, #090E15 100%);
       --surface:   #151E2A;
       --border:    #232F3E;
       --text:      #E8EFF8;
@@ -53,6 +64,10 @@
 
   :root[data-theme="dark"] {
     --bg:        #0D1219;
+    --bg-grad:
+      radial-gradient(1100px 620px at 12% -12%, #17243C 0%, transparent 62%),
+      radial-gradient(900px 520px at 102% -4%, #1C1838 0%, transparent 58%),
+      linear-gradient(180deg, #101823 0%, #0D1219 48%, #090E15 100%);
     --surface:   #151E2A;
     --border:    #232F3E;
     --text:      #E8EFF8;
@@ -80,6 +95,18 @@
     padding: 24px 16px 88px;
   }
 
+  /* Degradê num pseudo-elemento fixo em vez de background-attachment: fixed —
+     evita o repaint a cada scroll no celular e o bug conhecido do iOS, e
+     garante que o fundo não estique quando a página fica alta. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: var(--bg-grad);
+    z-index: -1;
+    pointer-events: none;
+  }
+
   .shell {
     max-width: 1180px;
     margin: 0 auto;
@@ -89,9 +116,75 @@
   }
 
   /* ── Header ── */
-  .header { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
-  .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px; }
-  .header .date { font-size: .875rem; color: var(--muted); font-weight: 500; }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 4px 2px 2px;
+  }
+
+  /* A marca repete a grade 2×2 do ícone do PWA — mesma identidade, sem
+     carregar imagem: são quatro quadradinhos em CSS. */
+  .header-marca {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: linear-gradient(145deg, var(--accent) 0%, #6C4BE8 100%);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    padding: 11px;
+    box-shadow: 0 4px 14px rgba(36, 97, 217, .28);
+  }
+  .header-marca i { background: #fff; border-radius: 2px; opacity: .95; }
+  .header-marca i:nth-child(2) { opacity: .6; }
+  .header-marca i:nth-child(3) { opacity: .75; }
+
+  .header-textos { min-width: 0; }
+  .header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -.5px;
+    line-height: 1.15;
+  }
+  .header h1 .marca-dld {
+    background: linear-gradient(120deg, var(--accent) 0%, #7C5CF0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .header .date {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    font-size: .82rem;
+    color: var(--muted);
+    font-weight: 500;
+    margin-top: 3px;
+  }
+  .header .saudacao { font-weight: 700; color: var(--text); }
+  .header .date-sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--muted);
+    opacity: .55;
+    flex-shrink: 0;
+  }
+
+  /* Em tela estreita a linha da data quebra e o separador ficaria órfão no fim
+     da primeira linha — melhor empilhar saudação e data, sem o ponto. */
+  @media (max-width: 460px) {
+    .header .date { display: block; }
+    .header .date-sep { display: none; }
+    .header .saudacao { display: block; margin-bottom: 1px; }
+  }
+
+  @media (max-width: 380px) {
+    .header h1 { font-size: 1.22rem; }
+    .header-marca { width: 38px; height: 38px; padding: 9px; border-radius: 11px; }
+  }
 
   /* ══ Grid de módulos ══
      Celular pequeno: 1 coluna (cards em linha compacta).
@@ -615,6 +708,14 @@
     flex-wrap: wrap;
   }
   .conta-venc { font-size: .78rem; color: var(--muted); font-weight: 500; }
+  .conta-sep {
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--muted);
+    opacity: .5;
+    flex-shrink: 0;
+    margin: 0 -2px;
+  }
   .conta-valor { font-size: .78rem; color: var(--muted); font-weight: 600; }
   .conta-valor.sem-valor { font-style: italic; opacity: .8; }
 
@@ -698,6 +799,47 @@
   .btn-add:hover { opacity: .9; }
   .btn-add:active { transform: scale(.98); }
   .btn-add:disabled { opacity: .5; cursor: default; }
+
+  /* ── Chip de streak — sai do cabeçalho do card e passa a viver dentro dele,
+        visível só com o card aberto. Fechado, o card mostra só o contador. ── */
+  .streak-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--pendente-bg);
+    color: var(--pendente);
+    padding: 5px 12px 5px 10px;
+    border-radius: 99px;
+    font-size: .78rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .streak-chip strong { font-weight: 800; font-size: .86rem; }
+  .streak-chip.zerada { background: var(--anulado-bg); color: var(--anulado); }
+
+  /* ── Modal de confirmação (substitui o confirm() do navegador) ── */
+  .confirmar-texto {
+    font-size: .92rem;
+    line-height: 1.5;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .confirmar-acoes { display: flex; gap: 10px; }
+  .confirmar-acoes button {
+    flex: 1;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .confirmar-acoes button:active { transform: scale(.98); }
+  .btn-cancelar { background: var(--bg); color: var(--text); border: 1px solid var(--border) !important; }
+  .btn-confirmar { background: var(--accent); color: #fff; }
+  .btn-confirmar.perigo { background: var(--nao); }
 
   /* ── Modal (bottom sheet) ── */
   .modal-backdrop {
@@ -833,8 +975,15 @@
 <div class="shell">
 
   <header class="header">
-    <h1>DLD - Daily Life Dashboard</h1>
-    <p class="date" id="hoje-label"></p>
+    <div class="header-marca" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="header-textos">
+      <h1><span class="marca-dld">DLD</span> · Daily Life Dashboard</h1>
+      <p class="date">
+        <span class="saudacao" id="saudacao"></span>
+        <span class="date-sep" aria-hidden="true"></span>
+        <span id="hoje-label"></span>
+      </p>
+    </div>
   </header>
 
   <div class="modulos-grid">
@@ -877,6 +1026,7 @@
     </div>
 
     <div class="card-body" id="habitos-body">
+      <div class="streak-chip" id="habitos-streak"><span>🔥</span> <strong>0</strong> dias seguidos</div>
       <div class="list-header">
         <span class="section-label" style="margin-bottom:0">Seus hábitos</span>
         <button class="btn-icon-add" aria-label="Adicionar hábito" onclick="abrirModalHabito()">+</button>
@@ -922,6 +1072,10 @@
               <span class="agua-pct" id="agua-pct">0%</span>
             </div>
           </div>
+        </div>
+
+        <div style="text-align:center">
+          <div class="streak-chip" id="agua-streak"><span>🔥</span> <strong>0</strong> dias seguidos</div>
         </div>
 
         <div class="agua-botoes">
@@ -1067,6 +1221,22 @@
   </div>
 </div>
 
+<!-- Modal: Confirmação genérica — usado por toda ação destrutiva do app, no
+     lugar do confirm() nativo do navegador. Uma folha só, reaproveitada. -->
+<div class="modal-backdrop" id="modal-backdrop-confirmar" onclick="fecharModalSeFundo(event, 'modal-backdrop-confirmar', cancelarConfirmacao)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-confirmar">
+    <div class="modal-header">
+      <h2 id="modal-titulo-confirmar">Confirmar</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="cancelarConfirmacao()">×</button>
+    </div>
+    <p class="confirmar-texto" id="confirmar-texto"></p>
+    <div class="confirmar-acoes">
+      <button type="button" class="btn-cancelar" onclick="cancelarConfirmacao()">Cancelar</button>
+      <button type="button" class="btn-confirmar" id="confirmar-ok" onclick="responderConfirmacao(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Criar/editar conta -->
 <div class="modal-backdrop" id="modal-backdrop-conta" onclick="fecharModalSeFundo(event, 'modal-backdrop-conta', fecharModalConta)">
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-conta">
@@ -1182,6 +1352,11 @@ document.getElementById('hoje-label').textContent = hojeReal.toLocaleDateString(
   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
 });
 
+/* Saudação pela hora do aparelho — o único texto da tela que muda ao longo
+   do dia sem depender de nenhuma chamada à API. */
+document.getElementById('saudacao').textContent =
+  (h => h < 5 ? 'Boa madrugada' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite')(hojeReal.getHours());
+
 function dataISOHoje() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -1202,6 +1377,39 @@ function escHtml(s) {
 function fecharModalSeFundo(e, backdropId, fecharFn) {
   if (e.target.id === backdropId) fecharFn();
 }
+
+/* ── Confirmação no padrão do app, no lugar do confirm() do navegador ──
+   Devolve uma Promise<boolean>, então o chamador continua lendo como antes:
+   `if (!await confirmar({...})) return;`. O confirm() nativo travava a página
+   inteira e ignorava o tema e o desenho do resto do app. */
+let _resolverConfirmacao = null;
+
+function confirmar({ titulo, texto, acao = 'Confirmar', perigo = false }) {
+  const btn = document.getElementById('confirmar-ok');
+  document.getElementById('modal-titulo-confirmar').textContent = titulo;
+  document.getElementById('confirmar-texto').textContent = texto;
+  btn.textContent = acao;
+  btn.classList.toggle('perigo', perigo);
+  document.getElementById('modal-backdrop-confirmar').classList.add('open');
+  setTimeout(() => btn.focus(), 200);
+
+  return new Promise(resolve => { _resolverConfirmacao = resolve; });
+}
+
+function responderConfirmacao(valor) {
+  document.getElementById('modal-backdrop-confirmar').classList.remove('open');
+  const resolver = _resolverConfirmacao;
+  _resolverConfirmacao = null;
+  if (resolver) resolver(valor);
+}
+
+function cancelarConfirmacao() { responderConfirmacao(false); }
+
+/* Esc fecha a confirmação como "cancelar" — sem isso a Promise ficaria
+   pendente para sempre se o usuário fechasse a folha por outro caminho. */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && _resolverConfirmacao) cancelarConfirmacao();
+});
 
 /* ══════════════════════════════════════════════════════════════════
    Cards expansíveis — lazy init: fechado não chama API nenhuma; a
@@ -1527,7 +1735,7 @@ async function carregarStreak() {
     if (!res.ok) throw new Error();
     const data = await res.json();
     streakAtual = data.streak_atual;
-    atualizarHeaderHabitos();
+    renderStreakHabitos();
   } catch {
     // silencioso — o header simplesmente não mostra a streak; a lista de
     // hábitos ainda tenta carregar normalmente.
@@ -1550,21 +1758,27 @@ async function carregarHabitosLista() {
   }
 }
 
-/* ── Indicador do cabeçalho: streak + "X de Y" (RN-17, calculado aqui,
-   nunca pelo backend) ── */
+/* ── Indicador do cabeçalho: só o contador "X de Y" (RN-17, calculado aqui,
+   nunca pelo backend). A streak saiu daqui e passou a viver dentro do card,
+   no chip que só aparece com o card aberto — fechado, o cabeçalho mostra
+   apenas o número que interessa de relance. ── */
 function atualizarHeaderHabitos() {
   const badge = document.getElementById('habitos-header-badges');
-  const espacoMaior = '   '; // espaço maior que um espaço normal (nbsp não colapsa)
   const total = habitosCache.length;
 
-  let texto = `🔥 Seu streak atual: ${streakAtual}`;
-  if (total > 0) {
-    const feitos = habitosCache.filter(h => h.status_hoje === 'FEITO').length;
-    const anulados = habitosCache.filter(h => h.status_hoje === 'ANULADO').length;
-    const y = total - anulados;
-    texto += `${espacoMaior}${feitos}/${y}${espacoMaior}hoje`;
-  }
-  badge.textContent = texto;
+  if (!total) { badge.textContent = ''; return; }
+
+  const feitos = habitosCache.filter(h => h.status_hoje === 'FEITO').length;
+  const anulados = habitosCache.filter(h => h.status_hoje === 'ANULADO').length;
+  badge.textContent = `${feitos}/${total - anulados} hoje`;
+}
+
+function renderStreakHabitos() {
+  const el = document.getElementById('habitos-streak');
+  el.classList.toggle('zerada', streakAtual === 0);
+  el.innerHTML = streakAtual === 0
+    ? '<span>🌱</span> Nenhum dia seguido ainda'
+    : `<span>🔥</span> <strong>${streakAtual}</strong> ${streakAtual === 1 ? 'dia seguido' : 'dias seguidos'}`;
 }
 
 /* ── Renderização, agrupada por categoria (client-side, RN-22) ── */
@@ -1754,12 +1968,19 @@ document.getElementById('habito-form').addEventListener('submit', async e => {
   }
 });
 
-/* ── Exclusão com confirmação (F8 — confirm() nativo, sem padrão prévio
-   de modal de exclusão no app pra reaproveitar) ── */
+/* ── Exclusão com confirmação (F8) — usa a folha de confirmação do app.
+   O plano original propunha confirm() nativo por não haver padrão prévio de
+   modal de exclusão pra reaproveitar; agora há, e os três pontos destrutivos
+   do app (excluir hábito, excluir conta, desfazer pagamento) usam o mesmo. ── */
 async function excluirHabito(id) {
   const h = habitosCache.find(x => x.id === id);
   if (!h) return;
-  if (!confirm(`Excluir "${h.nome}"? Essa ação não pode ser desfeita.`)) return;
+  const ok = await confirmar({
+    titulo: 'Excluir hábito',
+    texto: `"${h.nome}" será excluído. Essa ação não pode ser desfeita — mas os dias já fechados continuam no histórico e na streak.`,
+    acao: 'Excluir', perigo: true,
+  });
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API}/habitos/${id}`, {
@@ -1873,7 +2094,7 @@ async function carregarStreakAgua() {
     if (tratarNaoAutorizado(res)) return;
     if (!res.ok) throw new Error();
     streakAgua = (await res.json()).streak_atual;
-    atualizarHeaderAgua();
+    renderStreakAgua();
   } catch {
     // silencioso — o header simplesmente não mostra a streak; o estado do dia
     // ainda carrega normalmente.
@@ -1927,10 +2148,17 @@ function renderAgua() {
 }
 
 function atualizarHeaderAgua() {
-  const badge = document.getElementById('agua-header-badges');
-  const espacoMaior = '      '; // mesmo espaçamento (nbsp) usado no header de Hábitos
-  badge.textContent =
-    `🔥 Seu streak atual: ${streakAgua}${espacoMaior}${formatarVolume(aguaHoje.total_ml)} / ${formatarVolume(aguaHoje.meta_ml)}`;
+  // Só o contador: a streak vive no chip dentro do card (ver renderStreakAgua).
+  document.getElementById('agua-header-badges').textContent =
+    `${formatarVolume(aguaHoje.total_ml)} / ${formatarVolume(aguaHoje.meta_ml)}`;
+}
+
+function renderStreakAgua() {
+  const el = document.getElementById('agua-streak');
+  el.classList.toggle('zerada', streakAgua === 0);
+  el.innerHTML = streakAgua === 0
+    ? '<span>🌱</span> Nenhum dia seguido ainda'
+    : `<span>🔥</span> <strong>${streakAgua}</strong> ${streakAgua === 1 ? 'dia seguido' : 'dias seguidos'}`;
 }
 
 /* ── Registro pelos botões fixos (200 ml / 480 ml / 1 L) ──
@@ -2233,15 +2461,13 @@ function atualizarHeaderContas() {
     return;
   }
 
+  // Só as quantidades: o total em aberto fica no rodapé da lista, dentro do
+  // card aberto, onde há espaço para ele sem competir com o nome do módulo.
   const vencidas = abertas.filter(contaVencida).length;
-  const total = abertas.reduce((s, c) => s + (c.valor_centavos || 0), 0);
-  const espacoMaior = '   ';
-
   const partes = [];
   if (vencidas) partes.push(`${vencidas} vencida${vencidas > 1 ? 's' : ''}`);
   partes.push(`${abertas.length} em aberto`);
-  if (total) partes.push(formatarDinheiro(total));
-  badge.textContent = partes.join(`${espacoMaior}·${espacoMaior}`);
+  badge.textContent = partes.join(' · ');
 }
 
 /* ── Renderização: lista cronológica pura, sem agrupamento ──
@@ -2273,14 +2499,18 @@ function contaRowHtml(c) {
   const paga = c.status !== 'PENDENTE';
   const atrasada = contaVencida(c);
 
-  const meta = paga
-    ? `<span class="conta-venc">Pago em ${dataCurta(c.pago_em)}</span>
-       <span class="conta-valor">${formatarDinheiro(c.valor_pago_centavos)}</span>`
-    : `<span class="conta-venc">Vence ${dataCurta(c.data_vencimento)}</span>
-       ${c.valor_centavos != null
-          ? `<span class="conta-valor">${formatarDinheiro(c.valor_centavos)}</span>`
-          : '<span class="conta-valor sem-valor">sem valor definido</span>'}
-       ${atrasada ? '<span class="badge-atrasado">Atrasado</span>' : ''}`;
+  // A data de vencimento fica visível sempre, inclusive depois de pago: saber
+  // quando a conta vencia continua importando quando se olha um mês fechado.
+  const meta = `
+    <span class="conta-venc">Vence ${dataCurta(c.data_vencimento)}</span>
+    ${paga
+      ? `<span class="conta-sep" aria-hidden="true"></span>
+         <span class="conta-venc">pago em ${dataCurta(c.pago_em)}</span>
+         <span class="conta-valor">${formatarDinheiro(c.valor_pago_centavos)}</span>`
+      : `${c.valor_centavos != null
+            ? `<span class="conta-valor">${formatarDinheiro(c.valor_centavos)}</span>`
+            : '<span class="conta-valor sem-valor">sem valor definido</span>'}
+         ${atrasada ? '<span class="badge-atrasado">Atrasado</span>' : ''}`}`;
 
   const acao = paga
     ? `<span class="conta-chip ${c.status === 'PAGO_ATRASADO' ? 'atrasado' : ''}">✓ ${c.status === 'PAGO_ATRASADO' ? 'Pago atrasado' : 'Pago'}</span>`
@@ -2374,7 +2604,12 @@ document.getElementById('pagamento-form').addEventListener('submit', async e => 
 async function desfazerPagamento(id) {
   const c = contasCache.find(x => x.id === id);
   if (!c) return;
-  if (!confirm(`Desfazer o pagamento de "${c.nome}"?`)) return;
+  const ok = await confirmar({
+    titulo: 'Desfazer pagamento',
+    texto: `O pagamento de "${c.nome}" será removido e a conta volta a aparecer em aberto neste mês.`,
+    acao: 'Desfazer',
+  });
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API}/contas/${id}/pagamento?competencia=${competenciaVista}`, {
@@ -2494,7 +2729,12 @@ document.getElementById('conta-form').addEventListener('submit', async e => {
 async function excluirConta(id) {
   const c = contasCache.find(x => x.id === id);
   if (!c) return;
-  if (!confirm(`Excluir "${c.nome}"? Os pagamentos já registrados continuam no histórico.`)) return;
+  const ok = await confirmar({
+    titulo: 'Excluir conta',
+    texto: `"${c.nome}" deixa de aparecer nos próximos meses. Os pagamentos já registrados continuam no histórico.`,
+    acao: 'Excluir', perigo: true,
+  });
+  if (!ok) return;
 
   try {
     const res = await fetch(`${API}/contas/${id}`, { method: 'DELETE', headers: authHeaders() });
