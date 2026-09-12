@@ -7,7 +7,7 @@
 // manifest.json, ícones) — senão o navegador continua servindo a versão
 // antiga guardada. Foi o que aconteceu com a trava de orientação no
 // manifest: sem bump, o PWA instalado seguia lendo o manifest velho.
-const CACHE_NAME = 'dld-shell-v3';  // v3: botão de tema, mês no calendário, linha de conta atrasada
+const CACHE_NAME = 'dld-shell-v4';  // v4: grade compacta, acordeão, configurações, editar/excluir medicamento, card Agenda
 const SHELL_FILES = [
   './',
   './index.html',

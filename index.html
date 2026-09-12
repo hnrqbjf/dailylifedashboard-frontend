@@ -128,6 +128,10 @@
     display: flex;
     align-items: center;
     gap: 14px;
+    /* Uma linha separando identidade de conteúdo: sem ela, o cabeçalho e o
+       primeiro card pareciam a mesma coisa. */
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
     padding: 4px 2px 2px;
   }
 
@@ -220,15 +224,16 @@
      Tasks e qualquer card expandido ocupam a linha inteira. */
   .modulos-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    /* auto-fit em vez de número fixo de colunas: a grade se ajusta sozinha ao
+       número de módulos e à largura, em vez de abrir buracos quando um card
+       expande ou quando o total não é múltiplo de 4. */
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 14px;
-    grid-auto-flow: row dense; /* card expandido ocupa a linha toda; os pequenos
-                                  sobem pra preencher o buraco que sobraria */
+    grid-auto-flow: row dense;
   }
-  @media (min-width: 560px)  { .modulos-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 1000px) { .modulos-grid { grid-template-columns: repeat(4, 1fr); } }
 
-  .card-tasks,
+  /* Só o card aberto ocupa a linha inteira. Tasks virou azulejo normal: sem
+     conteúdo, não fazia jus a uma faixa inteira da tela. */
   .card.open { grid-column: 1 / -1; }
 
   /* ── Card expansível ── */
@@ -278,20 +283,12 @@
 
   /* Cabeçalho em modo "azulejo" quadrado — só em tela média pra cima,
      e só enquanto o card está fechado */
+  /* Azulejo fechado: compacto, ícone à esquerda e indicador à direita. O
+     quadrado de antes gastava metade da tela com vazio e empurrava tudo para
+     baixo — a sensação de "rolar muito" vinha daí, não do número de módulos. */
   @media (min-width: 560px) {
-    .card:not(.open):not(.card-tasks) { aspect-ratio: 1 / .82; }
-
-    .card:not(.open) .card-header {
-      flex-direction: column;
-      justify-content: center;
-      text-align: center;
-      height: 100%;
-      gap: 8px;
-    }
-    .card:not(.open) .card-icone { font-size: 1.9rem; }
-    .card:not(.open) .card-nome { font-size: 1.05rem; }
-    .card:not(.open) .card-sub { flex: 0 0 auto; text-align: center; white-space: normal; }
-    .card-tasks:not(.open) .card-header { min-height: 120px; }
+    .card:not(.open) .card-header { min-height: 76px; padding: 14px 16px; }
+    .card:not(.open) .card-icone { font-size: 1.5rem; }
   }
 
   .card-body { display: none; padding: 0 16px 18px; }
@@ -306,6 +303,14 @@
   /* Cards de módulos ainda não implementados */
   .card-em-breve .card-sub { color: var(--accent); }
   .card-em-breve:not(.open) { border-style: dashed; }
+
+  /* Linha informativa dentro de uma folha de opções (não é botão) */
+  .opcao-info {
+    padding: 12px 14px;
+    font-size: .88rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
 
   /* ── Cards de medicamento / linhas de hábito ── */
   .med-card {
@@ -1032,6 +1037,8 @@
       </p>
     </div>
     <button class="btn-tema" id="btn-tema" onclick="alternarTema()" type="button">🖥️</button>
+    <button class="btn-tema" id="btn-config" onclick="abrirConfig()" type="button"
+            aria-label="Configurações">⚙️</button>
   </header>
 
   <div class="modulos-grid">
@@ -1188,8 +1195,25 @@
     <div class="card-body">
       <div class="empty">
         <span class="icon">✅</span>
-        Módulo ainda não implementado.<br>
-        <small>Fica sempre sozinho na largura inteira — é o módulo com mais conteúdo por tela.</small>
+        Módulo ainda não implementado.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Card: Agenda ═══════════════ -->
+  <div class="card card-em-breve" id="card-agenda">
+    <div class="card-header" role="button" tabindex="0" aria-expanded="false"
+         onclick="toggleCard('agenda')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('agenda');}">
+      <span class="card-icone">📅</span>
+      <span class="card-nome">Agenda</span>
+      <span class="card-sub">Em breve</span>
+      <span class="chevron">▾</span>
+    </div>
+    <div class="card-body">
+      <div class="empty">
+        <span class="icon">📅</span>
+        Módulo ainda não implementado.
       </div>
     </div>
   </div>
@@ -1202,6 +1226,17 @@
 <button class="btn-minimizar-tudo" id="btn-minimizar-tudo" onclick="minimizarTudo()">▾ Minimizar tudo</button>
 
 <div id="toast"></div>
+
+<!-- Modal: Configurações -->
+<div class="modal-backdrop" id="modal-backdrop-config" onclick="fecharModalSeFundo(event, 'modal-backdrop-config', fecharConfig)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-config">
+    <div class="modal-header">
+      <h2 id="modal-titulo-config">Configurações</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharConfig()">×</button>
+    </div>
+    <div class="opcoes-lista" id="config-lista"></div>
+  </div>
+</div>
 
 <!-- Modal: Adicionar medicamento -->
 <div class="modal-backdrop" id="modal-backdrop-med" onclick="fecharModalSeFundo(event, 'modal-backdrop-med', fecharModalMedicamento)">
@@ -1513,32 +1548,118 @@ const cardState = {
   agua:         { iniciado: false, open: false, init: initAgua },
   contas:       { iniciado: false, open: false, init: initContas },
   tasks:        { iniciado: false, open: false, init: null },
+  agenda:       { iniciado: false, open: false, init: null },
 };
 
 function toggleCard(nomeModulo) {
   const state = cardState[nomeModulo];
   const card = document.getElementById(`card-${nomeModulo}`);
   const header = card.querySelector('.card-header');
+  const abrindo = !state.open;
 
-  state.open = !state.open;
-  card.classList.toggle('open', state.open);
-  header.setAttribute('aria-expanded', String(state.open));
+  /* Um card aberto por vez. Com dois ou três abertos, a página virava uma
+     coluna longa e o módulo que interessa some no meio da rolagem — era o
+     principal motivo de "rolar muito". Fechar não descarta nada do que já
+     foi carregado: é só visibilidade. */
+  if (abrindo) {
+    Object.keys(cardState).forEach(outro => {
+      if (outro !== nomeModulo && cardState[outro].open) fecharCard(outro);
+    });
+  }
 
-  if (state.open && !state.iniciado) {
+  state.open = abrindo;
+  card.classList.toggle('open', abrindo);
+  header.setAttribute('aria-expanded', String(abrindo));
+
+  if (abrindo && !state.iniciado) {
     state.iniciado = true;
     if (state.init) state.init();
   }
+
+  if (abrindo) {
+    // O card sobe para o topo da grade quando abre; sem isto, ele pode abrir
+    // fora da área visível e parecer que nada aconteceu.
+    requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+}
+
+function fecharCard(nomeModulo) {
+  const card = document.getElementById(`card-${nomeModulo}`);
+  cardState[nomeModulo].open = false;
+  card.classList.remove('open');
+  card.querySelector('.card-header').setAttribute('aria-expanded', 'false');
 }
 
 function minimizarTudo() {
   Object.keys(cardState).forEach(nomeModulo => {
-    if (cardState[nomeModulo].open) {
-      cardState[nomeModulo].open = false;
-      const card = document.getElementById(`card-${nomeModulo}`);
-      card.classList.remove('open');
-      card.querySelector('.card-header').setAttribute('aria-expanded', 'false');
-    }
+    if (cardState[nomeModulo].open) fecharCard(nomeModulo);
   });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CONFIGURAÇÕES (⚙️ no cabeçalho)
+   ══════════════════════════════════════════════════════════════════ */
+
+function abrirConfig() {
+  document.getElementById('config-lista').innerHTML =
+    '<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('modal-backdrop-config').classList.add('open');
+  carregarConfig();
+}
+
+function fecharConfig() {
+  document.getElementById('modal-backdrop-config').classList.remove('open');
+}
+
+async function carregarConfig() {
+  const lista = document.getElementById('config-lista');
+  let silencio = null;
+  try {
+    const res = await fetch(`${API}/telegram/silencio`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (res.ok) silencio = await res.json();
+  } catch { /* sem bot configurado, ou servidor fora: a tela continua útil */ }
+
+  const linhaBot = silencio === null
+    ? '<div class="opcao-info">Não foi possível falar com o bot agora.</div>'
+    : silencio.silenciado
+      ? `<div class="opcao-info">🔕 Bot silenciado hoje${silencio.modulos.length ? ' — ' + silencio.modulos.join(', ') : ''}.</div>
+         <button class="opcao-btn" onclick="religarBot()"><span class="opcao-icone">🔔</span>Tirar o silêncio</button>`
+      : '<div class="opcao-info">🔔 Bot ativo — nenhum silêncio no momento.</div>';
+
+  lista.innerHTML = `
+    ${linhaBot}
+    <div class="opcao-divider"></div>
+    <button class="opcao-btn" onclick="fecharConfig(); alternarTema();">
+      <span class="opcao-icone">🎨</span>Alternar tema
+    </button>
+    <button class="opcao-btn perigo" onclick="esquecerChave()">
+      <span class="opcao-icone">🔑</span>Esquecer a chave de API neste aparelho
+    </button>
+  `;
+}
+
+async function religarBot() {
+  try {
+    const res = await fetch(`${API}/telegram/silencio`, { method: 'DELETE', headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    toast('Bot religado 🔔');
+    carregarConfig();
+  } catch {
+    toast('Não consegui religar o bot');
+  }
+}
+
+async function esquecerChave() {
+  const ok = await confirmar({
+    titulo: 'Esquecer a chave',
+    texto: 'A chave de API sai deste aparelho e será pedida de novo no próximo acesso.',
+    acao: 'Esquecer', perigo: true,
+  });
+  if (!ok) return;
+  try { localStorage.removeItem(API_KEY_STORAGE); } catch {}
+  location.reload();
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -1615,12 +1736,56 @@ function onDataEscolhida(valor) {
 }
 
 /* ── Modal de adicionar medicamento ── */
-function abrirModalMedicamento() {
+function abrirOpcoesMedicamento(id) {
+  const m = medsCache.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('modal-titulo-opcoes').textContent = m.nome;
+  document.getElementById('opcoes-lista').innerHTML = `
+    <button class="opcao-btn" onclick="fecharOpcoesHabito(); abrirModalMedicamento('${m.id}');">
+      <span class="opcao-icone">✎</span>Editar
+    </button>
+    <button class="opcao-btn perigo" onclick="fecharOpcoesHabito(); excluirMedicamento('${m.id}');">
+      <span class="opcao-icone">🗑</span>Excluir
+    </button>
+  `;
+  document.getElementById('modal-backdrop-opcoes').classList.add('open');
+}
+
+async function excluirMedicamento(id) {
+  const m = medsCache.find(x => x.id === id);
+  if (!m) return;
+  const ok = await confirmar({
+    titulo: 'Excluir medicamento',
+    texto: `"${m.nome}" deixa de ser acompanhado a partir de hoje. Os dias já fechados continuam no histórico.`,
+    acao: 'Excluir', perigo: true,
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`${API}/medicamentos/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok && res.status !== 204) throw new Error();
+    toast('Medicamento excluído');
+    await loadMeds();
+  } catch {
+    toast('Erro ao excluir medicamento');
+  }
+}
+
+function abrirModalMedicamento(id = null) {
+  medEditandoId = id;
+  const m = id ? medsCache.find(x => x.id === id) : null;
+  document.getElementById('modal-titulo-med').textContent =
+    m ? 'Editar medicamento' : 'Adicionar medicamento';
+  document.querySelector('#add-form-med button[type=submit]').textContent =
+    m ? 'Salvar' : 'Adicionar';
+  document.getElementById('med-nome').value = m ? m.nome : '';
+  document.getElementById('med-horario').value = m ? m.horario.slice(0, 5) : '';
   document.getElementById('modal-backdrop-med').classList.add('open');
   setTimeout(() => document.getElementById('med-nome').focus(), 200);
 }
 
 function fecharModalMedicamento() {
+  medEditandoId = null;
   document.getElementById('modal-backdrop-med').classList.remove('open');
 }
 
@@ -1656,8 +1821,12 @@ function atualizarHeaderMedicamentos(meds) {
   badge.textContent = `${tomados}/${meds.length}`;
 }
 
+let medsCache = [];
+let medEditandoId = null;
+
 /* ── Renderização ── */
 function renderList(meds) {
+  medsCache = meds;
   const el = document.getElementById('med-list');
   const hojeSendoVisto = ehHoje(dataVisualizada);
 
@@ -1712,6 +1881,14 @@ function renderList(meds) {
           <span>${statusLabel(med.status_dia) === 'Marcar' ? 'Pendente' : statusLabel(med.status_dia)}</span>
         </span>`;
 
+    /* O "⋯" só aparece olhando hoje: editar ou excluir a partir de um dia
+       passado daria a impressão de mexer no histórico, que é justamente o
+       que o módulo não permite. */
+    const opcoesHtml = ehHoje(dataVisualizada)
+      ? `<button class="btn-opcoes" onclick="abrirOpcoesMedicamento('${med.id}')"
+                 aria-label="Opções de ${escHtml(med.nome)}">⋯</button>`
+      : '';
+
     return `<div class="med-card" style="margin-bottom:10px">
       <div class="med-info">
         <div class="med-nome">${escHtml(med.nome)}</div>
@@ -1721,6 +1898,7 @@ function renderList(meds) {
         </div>
       </div>
       ${acaoHtml}
+      ${opcoesHtml}
     </div>`;
   }).join('');
 }
@@ -1773,26 +1951,29 @@ document.getElementById('add-form-med').addEventListener('submit', async e => {
   const nome = document.getElementById('med-nome').value.trim();
   const horario = document.getElementById('med-horario').value;
 
+  const editando = medEditandoId;
   btn.disabled = true;
-  btn.textContent = 'Adicionando…';
+  btn.textContent = editando ? 'Salvando…' : 'Adicionando…';
 
   try {
-    const res = await fetch(`${API}/medicamentos`, {
-      method: 'POST',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ nome, horario }),
-    });
+    const res = await fetch(
+      editando ? `${API}/medicamentos/${editando}` : `${API}/medicamentos`,
+      {
+        method: editando ? 'PATCH' : 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ nome, horario }),
+      });
     if (tratarNaoAutorizado(res)) return;
     if (!res.ok) throw new Error();
     e.target.reset();
-    toast(`${nome} adicionado ✓`);
+    toast(editando ? `${nome} atualizado ✓` : `${nome} adicionado ✓`);
     fecharModalMedicamento();
     if (!ehHoje(dataVisualizada)) irParaHoje(); else await loadMeds();
   } catch {
-    toast('Erro ao adicionar medicamento');
+    toast(editando ? 'Erro ao salvar medicamento' : 'Erro ao adicionar medicamento');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Adicionar';
+    btn.textContent = editando ? 'Salvar' : 'Adicionar';
   }
 });
 
