@@ -855,6 +855,165 @@
   }
   .contas-total strong { font-size: .95rem; color: var(--text); font-weight: 700; }
 
+  /* ══ Tarefas ══
+     Uma lista só, sem navegação por período: uma tarefa sem prazo não pertence
+     a dia nenhum, então não existe dia para navegar. O que muda é a seção —
+     atrasadas, pendentes, finalizadas recentes.
+
+     A tarja de prioridade é box-shadow inset, não border-left, pelo mesmo
+     motivo da linha de conta atrasada: não deslocar o conteúdo em relação às
+     linhas sem prioridade. */
+  .tarefa-grupo { margin-bottom: 14px; }
+  .tarefa-grupo:last-child { margin-bottom: 0; }
+  .tarefa-grupo-titulo {
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 8px 2px;
+  }
+  .tarefa-grupo-titulo.alerta { color: var(--nao); }
+
+  .tarefa-row {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 10px 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .tarefa-row:last-child { margin-bottom: 0; }
+  .tarefa-row.prio-ALTA  { box-shadow: inset 4px 0 0 var(--nao); }
+  .tarefa-row.prio-MEDIA { box-shadow: inset 4px 0 0 var(--pendente); }
+  .tarefa-row.prio-BAIXA { box-shadow: inset 4px 0 0 var(--anulado); }
+
+  .tarefa-row.atrasada {
+    background: var(--nao-bg);
+    border-color: var(--nao);
+    box-shadow: inset 4px 0 0 var(--nao);
+  }
+  .tarefa-row.atrasada .tarefa-titulo { color: var(--nao); }
+  .tarefa-row.atrasada .tarefa-meta   { color: var(--nao); opacity: .9; }
+  .tarefa-row.atrasada .badge-atrasado { background: var(--nao); color: #fff; }
+
+  .tarefa-row.finalizada { opacity: .72; }
+  .tarefa-row.finalizada .tarefa-titulo { text-decoration: line-through; color: var(--muted); }
+
+  .tarefa-info { flex: 1; min-width: 0; }
+  .tarefa-titulo {
+    font-size: .95rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tarefa-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+    font-size: .78rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .tarefa-chip {
+    flex-shrink: 0;
+    font-size: .72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: var(--tomado-bg);
+    color: var(--tomado);
+    white-space: nowrap;
+  }
+  .tarefa-chip.cancelada { background: var(--anulado-bg); color: var(--anulado); }
+  .tarefa-chip.recorrente { background: var(--accent-bg); color: var(--accent); }
+
+  /* Botão de concluir: quadrado de marcar, não texto. A trava do pai (RN-14)
+     aparece como desabilitado + motivo no title, antecipando o 409. */
+  .btn-concluir {
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    border: 2px solid var(--border);
+    background: transparent;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: .9rem;
+    line-height: 1;
+    color: var(--tomado);
+    transition: border-color .15s, background .15s, transform .1s;
+  }
+  .btn-concluir:hover:not(:disabled) { border-color: var(--tomado); background: var(--tomado-bg); }
+  .btn-concluir:active:not(:disabled) { transform: scale(.92); }
+  .btn-concluir:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* ── Subtarefas ── */
+  .subtarefa-lista { margin: 8px 0 0 14px; padding-left: 12px; border-left: 2px solid var(--border); }
+  .subtarefa-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+  }
+  .subtarefa-titulo { flex: 1; min-width: 0; font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subtarefa-row.finalizada .subtarefa-titulo { text-decoration: line-through; color: var(--muted); }
+  .btn-sub-add {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--accent);
+    padding: 4px 0;
+  }
+  .tarefa-contador { font-size: .74rem; font-weight: 700; color: var(--muted); }
+
+  /* Seção de finalizadas: recolhida por padrão, porque o que importa é o que
+     está em aberto. O <details> nativo já dá o comportamento inteiro. */
+  .tarefa-finalizadas > summary {
+    cursor: pointer;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    list-style: none;
+  }
+  .tarefa-finalizadas > summary::-webkit-details-marker { display: none; }
+  .tarefa-finalizadas > summary::before { content: '▸ '; }
+  .tarefa-finalizadas[open] > summary::before { content: '▾ '; }
+
+  .tarefa-repetir-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .tarefa-repetir-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+  /* O <select> herda a aparência do .field input para não destoar — é o único
+     campo de seleção do app até aqui. */
+  .field select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: .95rem;
+    color: var(--text);
+    outline: none;
+  }
+  .field select:focus { border-color: var(--accent); }
+
   /* ── Formulário ── */
   .form-row { display: flex; flex-direction: column; gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 5px; }
@@ -1354,20 +1513,24 @@
   </div>
 
   <!-- ═══════════════ Card: Tasks — sempre sozinho, largura inteira ═══════════════ -->
-  <div class="card card-em-breve card-tasks" id="card-tasks">
+  <div class="card card-tasks" id="card-tasks">
     <div class="card-header" role="button" tabindex="0" aria-expanded="false"
          onclick="toggleCard('tasks')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('tasks');}">
       <span class="card-icone">✅</span>
       <span class="card-nome">Tasks</span>
-      <span class="card-sub">Em breve</span>
+      <span class="card-sub" id="tarefas-header-badges"></span>
       <span class="chevron">▾</span>
     </div>
-    <div class="card-body">
-      <div class="empty">
-        <span class="icon">✅</span>
-        Módulo ainda não implementado.
+
+    <div class="card-body" id="tarefas-body">
+      <div class="list-header">
+        <!-- Sem navegação por período, diferente de Medicamentos e Contas:
+             uma tarefa sem prazo não pertence a dia nenhum (RN-04). -->
+        <span class="date-label-btn" style="cursor:default">Suas tarefas</span>
+        <button class="btn-icon-add" aria-label="Adicionar tarefa" onclick="abrirModalTarefa()">+</button>
       </div>
+      <div id="tarefas-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 
@@ -1564,6 +1727,75 @@
   </div>
 </div>
 
+<!-- Modal: Nova tarefa / editar tarefa -->
+<div class="modal-backdrop" id="modal-backdrop-tarefa" onclick="fecharModalSeFundo(event, 'modal-backdrop-tarefa', fecharModalTarefa)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-tarefa">
+    <div class="modal-header">
+      <h2 id="modal-titulo-tarefa">Nova tarefa</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalTarefa()">×</button>
+    </div>
+    <form id="tarefa-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="tarefa-titulo">Título</label>
+        <input id="tarefa-titulo" type="text" placeholder="Ex: Levar o carro na revisão" required>
+      </div>
+      <div class="field">
+        <label for="tarefa-prazo" id="tarefa-prazo-label">Prazo (opcional)</label>
+        <input id="tarefa-prazo" type="date">
+      </div>
+      <div class="field">
+        <label for="tarefa-prioridade">Prioridade (opcional)</label>
+        <select id="tarefa-prioridade">
+          <option value="">Sem prioridade</option>
+          <option value="ALTA">Alta</option>
+          <option value="MEDIA">Média</option>
+          <option value="BAIXA">Baixa</option>
+        </select>
+      </div>
+      <label class="tarefa-repetir-check">
+        <input type="checkbox" id="tarefa-repetir" onchange="alternarRepeticao()">
+        Repetir a cada N dias
+      </label>
+      <div class="field" id="tarefa-intervalo-campo" style="display:none">
+        <label for="tarefa-intervalo">Intervalo (dias)</label>
+        <input id="tarefa-intervalo" type="number" min="1" max="365" step="1" placeholder="Ex: 7">
+        <p class="field-aviso">A próxima ocorrência é contada a partir do dia em que você concluir esta — não do prazo. Recorrente exige prazo e não tem subtarefas.</p>
+      </div>
+      <p class="field-aviso" id="tarefa-sub-aviso" style="display:none">Esta tarefa tem subtarefas, então não pode virar recorrente.</p>
+      <button class="btn-add" type="submit" id="tarefa-form-submit">Adicionar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Nova subtarefa -->
+<div class="modal-backdrop" id="modal-backdrop-subtarefa" onclick="fecharModalSeFundo(event, 'modal-backdrop-subtarefa', fecharModalSubtarefa)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-subtarefa">
+    <div class="modal-header">
+      <h2 id="modal-titulo-subtarefa">Nova subtarefa</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalSubtarefa()">×</button>
+    </div>
+    <form id="subtarefa-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="subtarefa-titulo">Título</label>
+        <input id="subtarefa-titulo" type="text" placeholder="Ex: Separar os documentos" required>
+        <p class="field-aviso">Subtarefa tem só título — sem prazo, sem prioridade e sem repetição.</p>
+      </div>
+      <button class="btn-add" type="submit">Adicionar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Opções da tarefa -->
+<div class="modal-backdrop" id="modal-backdrop-opcoes-tarefa" onclick="fecharModalSeFundo(event, 'modal-backdrop-opcoes-tarefa', fecharOpcoesTarefa)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-opcoes-tarefa">
+    <div class="modal-header">
+      <h2 id="modal-titulo-opcoes-tarefa">Opções</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharOpcoesTarefa()">×</button>
+    </div>
+    <div class="opcoes-lista" id="opcoes-lista-tarefa"></div>
+  </div>
+</div>
+
 <!-- Modal: Opções do hábito (marcar status / editar / excluir) -->
 <div class="modal-backdrop" id="modal-backdrop-opcoes" onclick="fecharModalSeFundo(event, 'modal-backdrop-opcoes', fecharOpcoesHabito)">
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-opcoes">
@@ -1731,7 +1963,7 @@ const cardState = {
   habitos:      { iniciado: false, open: false, init: initHabitos },
   agua:         { iniciado: false, open: false, init: initAgua },
   contas:       { iniciado: false, open: false, init: initContas },
-  tasks:        { iniciado: false, open: false, init: null },
+  tasks:        { iniciado: false, open: false, init: initTarefas },
   agenda:       { iniciado: false, open: false, init: null },
 };
 
@@ -3231,6 +3463,427 @@ async function excluirConta(id) {
     toast('Erro ao excluir conta');
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Tarefas
+   Uma lista só, sem navegação por período: uma tarefa sem prazo não
+   pertence a dia nenhum (RN-04), então não existe dia para navegar.
+   A janela de finalizadas é decidida AQUI e mandada pronta ao servidor
+   (RN-25) — trocar 7 por 30 é mudar a constante abaixo, e nada no
+   backend muda junto.
+   ══════════════════════════════════════════════════════════════════ */
+const JANELA_FINALIZADAS_DIAS = 7;
+
+let tarefasCache = [];
+let tarefaEditandoId = null;
+let subtarefaPaiId = null;
+let opcoesTarefaId = null;
+
+function initTarefas() {
+  carregarTarefas();
+}
+
+function corteFinalizadas() {
+  const d = new Date();
+  d.setDate(d.getDate() - JANELA_FINALIZADAS_DIAS);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+async function carregarTarefas() {
+  const listEl = document.getElementById('tarefas-list');
+  listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const res = await fetch(`${API}/tarefas?finalizadas_desde=${corteFinalizadas()}`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    tarefasCache = await res.json();
+    renderTarefas();
+    atualizarHeaderTarefas();
+  } catch {
+    listEl.innerHTML =
+      `<div class="empty"><span class="icon">⚠️</span>Não foi possível conectar ao servidor.<br><small>Verifique sua conexão e tente recarregar a página.</small></div>`;
+  }
+}
+
+/* Atrasada não é status: é comparação de datas feita aqui (RN-03), e só vale
+   para o que ainda está pendente. Mesma escolha de "vencida" em Contas. */
+function tarefaAtrasada(t) {
+  return t.status === 'PENDENTE' && t.prazo && t.prazo < dataISOHoje();
+}
+
+/* Tarefas e subtarefas contam juntas (RN-30) — é o mesmo número que o bot
+   cobra no Telegram, e duas contagens diferentes para a mesma pergunta seriam
+   uma discrepância visível no dia em que aparecessem lado a lado. */
+function contarPendentes() {
+  let pendentes = 0, atrasadas = 0;
+  for (const t of tarefasCache) {
+    if (t.status === 'PENDENTE') { pendentes++; if (tarefaAtrasada(t)) atrasadas++; }
+    for (const s of t.subtarefas) if (s.status === 'PENDENTE') pendentes++;
+  }
+  return { pendentes, atrasadas };
+}
+
+function atualizarHeaderTarefas() {
+  const badge = document.getElementById('tarefas-header-badges');
+  const { pendentes, atrasadas } = contarPendentes();
+
+  if (!pendentes) { badge.textContent = tarefasCache.length ? 'Tudo feito ✓' : ''; return; }
+
+  const partes = [];
+  if (atrasadas) partes.push(`${atrasadas} atrasada${atrasadas > 1 ? 's' : ''}`);
+  partes.push(`${pendentes} pendente${pendentes > 1 ? 's' : ''}`);
+  badge.textContent = partes.join(' · ');
+}
+
+/* ── Renderização: três blocos numa lista só ──
+   A ordem dentro de cada bloco já vem pronta do backend (prazo, depois
+   título); aqui só se separa atrasadas de pendentes e se recolhe o
+   histórico recente. */
+function renderTarefas() {
+  const el = document.getElementById('tarefas-list');
+
+  if (!tarefasCache.length) {
+    el.innerHTML = `<div class="empty"><span class="icon">✅</span>Nenhuma tarefa em aberto.</div>`;
+    return;
+  }
+
+  const atrasadas = tarefasCache.filter(tarefaAtrasada);
+  const pendentes = tarefasCache.filter(t => t.status === 'PENDENTE' && !tarefaAtrasada(t));
+  const finalizadas = tarefasCache.filter(t => t.status !== 'PENDENTE');
+
+  let html = '';
+  if (atrasadas.length) {
+    html += `<div class="tarefa-grupo">
+      <p class="tarefa-grupo-titulo alerta">Atrasadas</p>
+      ${atrasadas.map(tarefaRowHtml).join('')}
+    </div>`;
+  }
+  if (pendentes.length) {
+    html += `<div class="tarefa-grupo">
+      ${atrasadas.length ? '<p class="tarefa-grupo-titulo">Em aberto</p>' : ''}
+      ${pendentes.map(tarefaRowHtml).join('')}
+    </div>`;
+  }
+  if (!atrasadas.length && !pendentes.length) {
+    html += `<div class="empty"><span class="icon">✅</span>Nada em aberto. 👌</div>`;
+  }
+  if (finalizadas.length) {
+    html += `<details class="tarefa-grupo tarefa-finalizadas">
+      <summary>Concluídas nos últimos ${JANELA_FINALIZADAS_DIAS} dias (${finalizadas.length})</summary>
+      ${finalizadas.map(tarefaRowHtml).join('')}
+    </details>`;
+  }
+  el.innerHTML = html;
+}
+
+function tarefaRowHtml(t) {
+  const finalizada = t.status !== 'PENDENTE';
+  const atrasada = tarefaAtrasada(t);
+  const subs = t.subtarefas || [];
+  const subsPendentes = subs.filter(s => s.status === 'PENDENTE').length;
+
+  const meta = [];
+  if (t.prazo) meta.push(`<span>${atrasada ? 'Venceu' : 'Para'} ${dataCurta(t.prazo)}</span>`);
+  if (t.intervalo_dias) meta.push(`<span class="tarefa-chip recorrente">🔁 a cada ${t.intervalo_dias}d</span>`);
+  if (subs.length) meta.push(`<span class="tarefa-contador">${subs.length - subsPendentes}/${subs.length}</span>`);
+  if (atrasada) meta.push('<span class="badge-atrasado">Atrasado</span>');
+  if (finalizada && t.finalizado_em) {
+    meta.push(`<span>${t.status === 'CANCELADA' ? 'cancelada' : 'concluída'} em ${dataCurta(t.finalizado_em)}</span>`);
+  }
+
+  // A trava do pai (RN-14) vira botão desabilitado com o motivo no title:
+  // antecipa o 409 em vez de deixar o usuário descobrir por um toast de erro.
+  // A regra continua sendo do servidor; aqui só se evita a viagem.
+  const travado = subsPendentes > 0;
+  const acao = finalizada
+    ? `<span class="tarefa-chip ${t.status === 'CANCELADA' ? 'cancelada' : ''}">${t.status === 'CANCELADA' ? '✕ Cancelada' : '✓ Concluída'}</span>`
+    : `<button class="btn-concluir" onclick="concluirTarefa('${t.id}')" ${travado ? 'disabled' : ''}
+         title="${travado ? 'Conclua as subtarefas primeiro' : 'Concluir'}"
+         aria-label="Concluir ${escHtml(t.titulo)}">✓</button>`;
+
+  const classes = ['tarefa-row'];
+  if (atrasada) classes.push('atrasada');
+  else if (t.prioridade) classes.push(`prio-${t.prioridade}`);
+  if (finalizada) classes.push('finalizada');
+
+  return `<div>
+    <div class="${classes.join(' ')}">
+      <div class="tarefa-info">
+        <div class="tarefa-titulo">${escHtml(t.titulo)}</div>
+        ${meta.length ? `<div class="tarefa-meta">${meta.join('')}</div>` : ''}
+      </div>
+      ${acao}
+      <button class="btn-opcoes" onclick="abrirOpcoesTarefa('${t.id}')" aria-label="Opções de ${escHtml(t.titulo)}">⋯</button>
+    </div>
+    ${subs.length ? subtarefasHtml(t, subs) : ''}
+  </div>`;
+}
+
+function subtarefasHtml(t, subs) {
+  const itens = subs.map(s => `
+    <div class="subtarefa-row ${s.status !== 'PENDENTE' ? 'finalizada' : ''}">
+      ${s.status === 'PENDENTE'
+        ? `<button class="btn-concluir" style="width:22px;height:22px;font-size:.7rem"
+             onclick="concluirTarefa('${s.id}')" aria-label="Concluir ${escHtml(s.titulo)}">✓</button>`
+        : `<span class="btn-concluir" style="width:22px;height:22px;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;border-color:transparent">${s.status === 'CANCELADA' ? '✕' : '✓'}</span>`}
+      <span class="subtarefa-titulo">${escHtml(s.titulo)}</span>
+      <button class="btn-opcoes" onclick="abrirOpcoesTarefa('${s.id}')" aria-label="Opções de ${escHtml(s.titulo)}">⋯</button>
+    </div>`).join('');
+
+  // A primeira subtarefa entra pelo menu ⋯; daí em diante, pelo link aqui.
+  // Um "+ subtarefa" pendurado embaixo de toda tarefa sem subtarefa nenhuma
+  // enchia a lista de convite que quase nunca é aceito.
+  const adicionar = podeGanharSubtarefa(t)
+    ? `<button class="btn-sub-add" onclick="abrirModalSubtarefa('${t.id}')">+ subtarefa</button>`
+    : '';
+
+  return `<div class="subtarefa-lista">${itens}${adicionar}</div>`;
+}
+
+/* Recorrente não tem subtarefa (RN-18), e tarefa finalizada também não ganha
+   mais nenhuma — o backend recusaria os dois casos de qualquer forma. */
+function podeGanharSubtarefa(t) {
+  return t.status === 'PENDENTE' && !t.intervalo_dias;
+}
+
+/* ── Ações ── */
+
+/* `id` pode ser de uma tarefa ou de uma subtarefa: no backend são a mesma
+   entidade, e a rota de status é a mesma. */
+async function mudarStatusTarefa(id, status, mensagem) {
+  try {
+    const res = await fetch(`${API}/tarefas/${id}/status`, {
+      method: 'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ status }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => ({}));
+      toast(corpo.message || 'Não foi possível atualizar a tarefa');
+      return;
+    }
+    toast(mensagem);
+    // Recarrega em vez de remendar o cache: concluir uma recorrente CRIA uma
+    // linha nova, e reabrir APAGA uma — em nenhum dos dois casos a resposta
+    // sozinha diz como a lista ficou.
+    await carregarTarefas();
+  } catch {
+    toast('Erro ao atualizar a tarefa');
+  }
+}
+
+function concluirTarefa(id) { mudarStatusTarefa(id, 'CONCLUIDA', 'Feito ✓'); }
+
+function encontrarTarefa(id) {
+  for (const t of tarefasCache) {
+    if (t.id === id) return { item: t, sub: false };
+    const s = (t.subtarefas || []).find(x => x.id === id);
+    if (s) return { item: s, sub: true };
+  }
+  return null;
+}
+
+function abrirOpcoesTarefa(id) {
+  const achado = encontrarTarefa(id);
+  if (!achado) return;
+  const { item, sub } = achado;
+  opcoesTarefaId = id;
+
+  const finalizada = item.status !== 'PENDENTE';
+  const recorrente = !!item.intervalo_dias;
+  const opcoes = [];
+
+  if (finalizada) {
+    opcoes.push({ rotulo: '↩️ Reabrir', fn: `reabrirTarefa('${id}')` });
+  } else {
+    // Os dois rótulos existem com esse texto de propósito: a diferença entre
+    // cancelar e excluir (RN-09) é invisível numa tarefa normal e decisiva
+    // numa recorrente, e o nome é o único lugar onde ela pode ser explicada.
+    opcoes.push({ rotulo: '⏭️ Desisti dessa vez', fn: `cancelarTarefa('${id}')` });
+  }
+  if (!sub) {
+    if (podeGanharSubtarefa(item) && !(item.subtarefas || []).length) {
+      opcoes.push({ rotulo: '➕ Adicionar subtarefa', fn: `abrirModalSubtarefa('${id}')` });
+    }
+    opcoes.push({ rotulo: '✏️ Editar', fn: `abrirModalTarefa('${id}')` });
+  }
+  opcoes.push({ rotulo: '🗑️ Não quero mais isso', fn: `excluirTarefa('${id}')`, perigo: true });
+
+  document.getElementById('modal-titulo-opcoes-tarefa').textContent = item.titulo;
+  document.getElementById('opcoes-lista-tarefa').innerHTML = opcoes.map(o =>
+    `<button class="opcao-btn${o.perigo ? ' perigo' : ''}" onclick="fecharOpcoesTarefa(); ${o.fn}">${o.rotulo}</button>`
+  ).join('') + (recorrente && !finalizada
+    ? '<p class="field-aviso">Desistir gera a próxima ocorrência. Para encerrar a repetição de vez, use "não quero mais isso".</p>'
+    : '');
+
+  document.getElementById('modal-backdrop-opcoes-tarefa').classList.add('open');
+}
+
+function fecharOpcoesTarefa() {
+  document.getElementById('modal-backdrop-opcoes-tarefa').classList.remove('open');
+  opcoesTarefaId = null;
+}
+
+function cancelarTarefa(id) { mudarStatusTarefa(id, 'CANCELADA', 'Pulada nessa vez'); }
+function reabrirTarefa(id) { mudarStatusTarefa(id, 'PENDENTE', 'Reaberta'); }
+
+async function excluirTarefa(id) {
+  const achado = encontrarTarefa(id);
+  if (!achado) return;
+  const { item } = achado;
+
+  const ok = await confirmar({
+    titulo: 'Não quero mais isso',
+    texto: item.intervalo_dias
+      ? `"${item.titulo}" para de se repetir e sai da lista. O histórico das ocorrências anteriores continua.`
+      : `"${item.titulo}" sai da lista. Isso não é o mesmo que cancelar: cancelar guarda que você desistiu; isso apaga a tarefa da sua vista.`,
+    acao: 'Excluir', perigo: true,
+  });
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`${API}/tarefas/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok && res.status !== 204) throw new Error();
+    toast('Excluída');
+    await carregarTarefas();
+  } catch {
+    toast('Erro ao excluir');
+  }
+}
+
+/* ── Modal de cadastro e edição ── */
+
+function alternarRepeticao() {
+  const marcado = document.getElementById('tarefa-repetir').checked;
+  document.getElementById('tarefa-intervalo-campo').style.display = marcado ? '' : 'none';
+  // Recorrente exige prazo (RN-17) — o formulário cobra antes de qualquer
+  // chamada, em vez de deixar o 422 explicar. O rótulo muda junto: um campo
+  // que vira obrigatório continuando escrito "(opcional)" é uma contradição
+  // que o usuário só descobre ao tomar o erro.
+  document.getElementById('tarefa-prazo').required = marcado;
+  document.getElementById('tarefa-prazo-label').textContent =
+    marcado ? 'Prazo da primeira ocorrência' : 'Prazo (opcional)';
+}
+
+function abrirModalTarefa(id = null) {
+  tarefaEditandoId = id;
+  const form = document.getElementById('tarefa-form');
+  const titulo = document.getElementById('modal-titulo-tarefa');
+  const btn = document.getElementById('tarefa-form-submit');
+  const repetir = document.getElementById('tarefa-repetir');
+  const avisoSub = document.getElementById('tarefa-sub-aviso');
+
+  form.reset();
+  avisoSub.style.display = 'none';
+  repetir.disabled = false;
+
+  if (id) {
+    const t = tarefasCache.find(x => x.id === id);
+    titulo.textContent = 'Editar tarefa';
+    if (t) {
+      document.getElementById('tarefa-titulo').value = t.titulo;
+      document.getElementById('tarefa-prazo').value = t.prazo || '';
+      document.getElementById('tarefa-prioridade').value = t.prioridade || '';
+      repetir.checked = !!t.intervalo_dias;
+      document.getElementById('tarefa-intervalo').value = t.intervalo_dias || '';
+      // Uma tarefa com subtarefas não pode virar recorrente (RN-18).
+      if ((t.subtarefas || []).length) { repetir.disabled = true; avisoSub.style.display = ''; }
+    }
+    btn.textContent = 'Salvar';
+  } else {
+    titulo.textContent = 'Nova tarefa';
+    btn.textContent = 'Adicionar';
+  }
+
+  alternarRepeticao();
+  document.getElementById('modal-backdrop-tarefa').classList.add('open');
+  setTimeout(() => document.getElementById('tarefa-titulo').focus(), 200);
+}
+
+function fecharModalTarefa() {
+  document.getElementById('modal-backdrop-tarefa').classList.remove('open');
+  tarefaEditandoId = null;
+}
+
+document.getElementById('tarefa-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('tarefa-form-submit');
+  const titulo = document.getElementById('tarefa-titulo').value.trim();
+  const prazo = document.getElementById('tarefa-prazo').value || null;
+  const prioridade = document.getElementById('tarefa-prioridade').value || null;
+  const repete = document.getElementById('tarefa-repetir').checked;
+  const intervalo = repete ? Number(document.getElementById('tarefa-intervalo').value) : null;
+
+  if (!titulo) { toast('Informe o título'); return; }
+  if (repete && (!Number.isInteger(intervalo) || intervalo < 1 || intervalo > 365)) {
+    toast('O intervalo deve ser de 1 a 365 dias'); return;
+  }
+  if (repete && !prazo) { toast('Uma tarefa que se repete precisa de um prazo'); return; }
+
+  btn.disabled = true;
+  try {
+    const editando = tarefaEditandoId;
+    const res = await fetch(editando ? `${API}/tarefas/${editando}` : `${API}/tarefas`, {
+      method: editando ? 'PATCH' : 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ titulo, prazo, prioridade, intervalo_dias: intervalo }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => ({}));
+      toast(corpo.message || 'Erro ao salvar a tarefa');
+      return;
+    }
+    toast(editando ? 'Tarefa atualizada ✓' : `${titulo} adicionada ✓`);
+    fecharModalTarefa();
+    await carregarTarefas();
+  } catch {
+    toast('Erro ao salvar a tarefa');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ── Modal de subtarefa ── */
+
+function abrirModalSubtarefa(paiId) {
+  subtarefaPaiId = paiId;
+  document.getElementById('subtarefa-form').reset();
+  document.getElementById('modal-backdrop-subtarefa').classList.add('open');
+  setTimeout(() => document.getElementById('subtarefa-titulo').focus(), 200);
+}
+
+function fecharModalSubtarefa() {
+  document.getElementById('modal-backdrop-subtarefa').classList.remove('open');
+  subtarefaPaiId = null;
+}
+
+document.getElementById('subtarefa-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const titulo = document.getElementById('subtarefa-titulo').value.trim();
+  const pai = subtarefaPaiId;
+  if (!titulo || !pai) return;
+
+  try {
+    const res = await fetch(`${API}/tarefas/${pai}/subtarefas`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ titulo }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => ({}));
+      toast(corpo.message || 'Erro ao adicionar a subtarefa');
+      return;
+    }
+    fecharModalSubtarefa();
+    await carregarTarefas();
+  } catch {
+    toast('Erro ao adicionar a subtarefa');
+  }
+});
 
 /* ── PWA: registra o service worker (necessário pra virar instalável) ── */
 if ('serviceWorker' in navigator) {
