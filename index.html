@@ -227,7 +227,7 @@
     /* auto-fit em vez de número fixo de colunas: a grade se ajusta sozinha ao
        número de módulos e à largura, em vez de abrir buracos quando um card
        expande ou quando o total não é múltiplo de 4. */
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 14px;
     grid-auto-flow: row dense;
   }
@@ -283,16 +283,54 @@
 
   /* Cabeçalho em modo "azulejo" quadrado — só em tela média pra cima,
      e só enquanto o card está fechado */
-  /* Azulejo fechado: compacto, ícone à esquerda e indicador à direita. O
-     quadrado de antes gastava metade da tela com vazio e empurrava tudo para
-     baixo — a sensação de "rolar muito" vinha daí, não do número de módulos. */
-  @media (min-width: 560px) {
-    .card:not(.open) .card-header { min-height: 76px; padding: 14px 16px; }
-    .card:not(.open) .card-icone { font-size: 1.5rem; }
+  /* Azulejo fechado em tela média/grande: o ícone ganha um disco à esquerda e
+     o indicador desce para baixo do nome. Fica um card com presença, sem o
+     vazio do quadrado antigo — o meio-termo entre "grande e oco" e "pequeno
+     demais". Com o mínimo de 320px, dá três colunas no desktop. */
+  @media (min-width: 560px) and (max-width: 899px) {
+    .card:not(.open) .card-header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas:
+        "icone nome chevron"
+        "icone sub  chevron";
+      align-items: center;
+      column-gap: 16px;
+      min-height: 104px;
+      padding: 18px 20px;
+    }
+    .card:not(.open) .card-icone {
+      grid-area: icone;
+      font-size: 1.7rem;
+      width: 54px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      background: var(--accent-bg);
+    }
+    .card:not(.open) .card-nome { grid-area: nome; align-self: end; font-size: 1.08rem; }
+    .card:not(.open) .card-sub {
+      grid-area: sub;
+      align-self: start;
+      flex: 0 0 auto;
+      text-align: left;
+      margin-top: 2px;
+    }
+    .card:not(.open) .chevron { grid-area: chevron; }
+    /* Sem indicador (o badge só existe depois que o módulo carrega), o nome
+       fica sozinho e volta ao centro — senão sobra um vão acima dele. */
+    .card:not(.open) .card-sub:empty { display: none; }
+    .card:not(.open) .card-header:has(.card-sub:empty) {
+      grid-template-areas: "icone nome chevron";
+    }
+    .card:not(.open) .card-header:has(.card-sub:empty) .card-nome { align-self: center; }
   }
 
   .card-body { display: none; padding: 0 16px 18px; }
   .card.open .card-body { display: block; }
+
 
   /* Em tela larga o card aberto ocupa a linha toda, mas o conteúdo fica
      centralizado numa largura legível em vez de esticar de ponta a ponta */
@@ -1021,6 +1059,137 @@
     .spinner { animation: none; }
     .btn-status, .btn-add, #toast { transition: none; }
   }
+  /* ══ Tela larga (≥900px): trilho de módulos à esquerda, conteúdo à direita ══
+     No celular a lista empilhada funciona bem, mas no desktop ela desperdiça a
+     largura e gasta altura: os azulejos ficavam espremidos no alto e o resto da
+     tela vazio. Aqui o card ABERTO usa `display: contents`, então o cabeçalho
+     dele continua na coluna do trilho e o corpo vai para a área de conteúdo —
+     sem duplicar marcação nem trocar o HTML, que segue idêntico no celular. */
+  @media (min-width: 900px) {
+    /* O trilho é permanente: a tela não muda de forma quando você abre um
+       módulo, só troca o que está na área de conteúdo. Enquanto nada está
+       aberto, quem ocupa essa área é o painel de convite — espaço reservado
+       com um propósito, e não espaço sobrando. */
+    .modulos-grid {
+      grid-template-columns: 272px minmax(0, 1fr);
+      align-content: start;
+      gap: 10px 18px;
+    }
+
+    .card { grid-column: 1; }
+
+    /* Itens do trilho: linha compacta, sem disco nem altura de azulejo. */
+    .card:not(.open) .card-header { min-height: 0; padding: 12px 14px; gap: 12px; }
+    .card:not(.open) .card-icone { font-size: 1.2rem; }
+    .card:not(.open) .card-nome { font-size: .97rem; }
+    .card:not(.open) .chevron { display: none; }
+
+    /* Painel de convite: ocupa a área de conteúdo até você escolher um módulo,
+       e some no instante em que algum abre. */
+    .painel-vazio {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      grid-column: 2;
+      grid-row: 1 / span 30;
+      align-self: stretch;
+      min-height: 260px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+    }
+    .painel-vazio-icone { font-size: 1.9rem; opacity: .75; }
+    .painel-vazio-titulo { margin: 0; font-weight: 700; font-size: 1.02rem; }
+    .painel-vazio-texto { margin: 0; color: var(--muted); font-size: .88rem; }
+  .btn-resumo {
+    margin-top: 16px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: .9rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 12px;
+    padding: 11px 18px;
+  }
+  .btn-resumo:hover { filter: brightness(1.06); }
+  .resumo-sempre {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: .82rem;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .resumo-sempre input { width: 15px; height: 15px; accent-color: var(--accent); }
+    .modulos-grid:has(.card.open) .painel-vazio { display: none; }
+
+    .card.open {
+      display: contents;  /* o cabeçalho e o corpo viram itens da grade */
+    }
+    .card.open > .card-header {
+      grid-column: 1;
+      background: var(--accent-bg);
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      min-height: 0;
+      padding: 12px 14px;
+      color: var(--accent);
+    }
+    .card.open > .card-header .card-sub { color: var(--accent); }
+    .card.open > .card-body {
+      grid-column: 2;
+      grid-row: 1 / span 30;   /* acompanha o trilho inteiro, qualquer que seja o nº de módulos */
+      align-self: start;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 22px 24px 26px;
+      max-width: none;         /* a largura já é a da coluna */
+      margin: 0;
+    }
+
+    /* O botão global continua útil no desktop: é ele que fecha o módulo aberto
+       e devolve a tela à grade de azulejos. */
+  }
+
+  /* Abaixo de 900px não existe coluna de conteúdo, então o painel de convite
+     também não existe. (Escrito como media query, e não como regra solta, para
+     não vencer por ordem o `display: flex` do trilho.) */
+  @media (max-width: 899px) { .painel-vazio { display: none; } }
+
+  .header-acoes { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  /* Celular: o nome do app ocupa a linha inteira e os botões descem para a
+     linha de baixo. Disputando espaço com eles, o título quebrava em duas
+     linhas e o cabeçalho ficava apertado justamente onde a tela é menor. */
+  @media (max-width: 640px) {
+    .header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      grid-template-areas:
+        "titulo titulo titulo"
+        "marca  data   acoes";
+      align-items: center;
+      row-gap: 10px;
+      column-gap: 12px;
+    }
+    /* `display: contents` dissolve o agrupador para que o título e a data
+       virem itens da grade e possam ir para linhas diferentes — sem mexer no
+       HTML, que continua o mesmo do desktop. */
+    .header-textos { display: contents; }
+    .header h1     { grid-area: titulo; white-space: nowrap; font-size: 1.05rem; }
+    .header .date  { grid-area: data; min-width: 0; }
+    .header-marca  { grid-area: marca; }
+    .header-acoes  { grid-area: acoes; }
+  }
 </style>
 </head>
 <body>
@@ -1036,9 +1205,11 @@
         <span id="hoje-label"></span>
       </p>
     </div>
-    <button class="btn-tema" id="btn-tema" onclick="alternarTema()" type="button">🖥️</button>
-    <button class="btn-tema" id="btn-config" onclick="abrirConfig()" type="button"
-            aria-label="Configurações">⚙️</button>
+    <div class="header-acoes">
+      <button class="btn-tema" id="btn-tema" onclick="alternarTema()" type="button">🖥️</button>
+      <button class="btn-tema" id="btn-config" onclick="abrirConfig()" type="button"
+              aria-label="Configurações">⚙️</button>
+    </div>
   </header>
 
   <div class="modulos-grid">
@@ -1216,6 +1387,19 @@
         Módulo ainda não implementado.
       </div>
     </div>
+  </div>
+
+  <!-- Painel da área de conteúdo enquanto nenhum módulo está aberto. Só
+       aparece em tela larga: no celular não existe coluna de conteúdo. -->
+  <div class="painel-vazio" id="painel-vazio" aria-hidden="true">
+    <span class="painel-vazio-icone">📊</span>
+    <p class="painel-vazio-titulo">Resumo do dia</p>
+    <p class="painel-vazio-texto">Veja tudo de uma vez, sem abrir cada módulo.</p>
+    <button class="btn-resumo" type="button" onclick="carregarResumo()">📊 Carregar resumo</button>
+    <label class="resumo-sempre">
+      <input type="checkbox" id="resumo-sempre" onchange="salvarResumoSempre(this.checked)">
+      Carregar sempre que eu abrir o app
+    </label>
   </div>
 
   </div><!-- /.modulos-grid -->
@@ -1576,11 +1760,15 @@ function toggleCard(nomeModulo) {
     if (state.init) state.init();
   }
 
-  if (abrindo) {
-    // O card sobe para o topo da grade quando abre; sem isto, ele pode abrir
-    // fora da área visível e parecer que nada aconteceu.
+  // Rolar até o card só faz sentido no empilhado: no trilho, o conteúdo
+  // aparece ao lado e a página nem se move.
+  if (abrindo && !telaLarga()) {
     requestAnimationFrame(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
+}
+
+function telaLarga() {
+  return window.matchMedia('(min-width: 900px)').matches;
 }
 
 function fecharCard(nomeModulo) {
@@ -1599,6 +1787,30 @@ function minimizarTudo() {
 /* ══════════════════════════════════════════════════════════════════
    CONFIGURAÇÕES (⚙️ no cabeçalho)
    ══════════════════════════════════════════════════════════════════ */
+
+/* ── Resumo do dia (dashboard) ──
+   A tela já existe; o dashboard ainda não. O botão e a caixa estão aqui de
+   propósito, para o lugar dele ficar reservado — mas responder nada a um
+   clique seria pior que não ter botão, então cada um dá o retorno que pode:
+   o botão avisa que é em breve, e a preferência é gravada de verdade, para
+   já valer no dia em que o resumo existir. */
+const RESUMO_SEMPRE_STORAGE = 'dld_resumo_sempre';
+
+function carregarResumo() {
+  toast('Resumo do dia: em breve 🙂');
+}
+
+function salvarResumoSempre(marcado) {
+  try { localStorage.setItem(RESUMO_SEMPRE_STORAGE, marcado ? '1' : '0'); } catch {}
+  toast(marcado ? 'Vou carregar o resumo ao abrir — quando ele existir' : 'Ok, não carrego sozinho');
+}
+
+(function restaurarResumoSempre() {
+  try {
+    const el = document.getElementById('resumo-sempre');
+    if (el) el.checked = localStorage.getItem(RESUMO_SEMPRE_STORAGE) === '1';
+  } catch {}
+})();
 
 function abrirConfig() {
   document.getElementById('config-lista').innerHTML =
