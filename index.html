@@ -860,9 +860,14 @@
      a dia nenhum, então não existe dia para navegar. O que muda é a seção —
      atrasadas, pendentes, finalizadas recentes.
 
-     A tarja de prioridade é box-shadow inset, não border-left, pelo mesmo
-     motivo da linha de conta atrasada: não deslocar o conteúdo em relação às
-     linhas sem prioridade. */
+     A tarja de prioridade é um retângulo de cantos retos, encostado na borda
+     esquerda mas sem alcançar os cantos arredondados do cartão. A primeira
+     versão usava `box-shadow: inset`, que é recortado pelo raio da borda e
+     fazia a tarja curvar nas pontas, com cara de vírgula. Um retângulo com
+     folga em cima e embaixo não encosta na curva e fica reto de verdade.
+
+     A linha atrasada continua com box-shadow inset de propósito: ali a barra
+     é de alerta, vai de ponta a ponta e é a mesma de `.conta-row.atrasada`. */
   .tarefa-grupo { margin-bottom: 14px; }
   .tarefa-grupo:last-child { margin-bottom: 0; }
   .tarefa-grupo-titulo {
@@ -876,19 +881,30 @@
   .tarefa-grupo-titulo.alerta { color: var(--nao); }
 
   .tarefa-row {
+    position: relative;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 10px 10px 10px 14px;
+    padding: 10px 10px 10px 12px;
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 8px;
   }
   .tarefa-row:last-child { margin-bottom: 0; }
-  .tarefa-row.prio-ALTA  { box-shadow: inset 4px 0 0 var(--nao); }
-  .tarefa-row.prio-MEDIA { box-shadow: inset 4px 0 0 var(--pendente); }
-  .tarefa-row.prio-BAIXA { box-shadow: inset 4px 0 0 var(--anulado); }
+
+  .tarefa-row[class*="prio-"]::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 4px;
+    border-radius: 0;
+  }
+  .tarefa-row.prio-ALTA::before  { background: var(--nao); }
+  .tarefa-row.prio-MEDIA::before { background: var(--pendente); }
+  .tarefa-row.prio-BAIXA::before { background: var(--anulado); }
 
   .tarefa-row.atrasada {
     background: var(--nao-bg);
@@ -933,23 +949,55 @@
   .tarefa-chip.cancelada { background: var(--anulado-bg); color: var(--anulado); }
   .tarefa-chip.recorrente { background: var(--accent-bg); color: var(--accent); }
 
-  /* Botão de concluir: quadrado de marcar, não texto. A trava do pai (RN-14)
-     aparece como desabilitado + motivo no title, antecipando o 409. */
+  /* Caixa de marcar, à ESQUERDA do título — mesma posição da subtarefa, que é
+     onde o olho procura numa lista de checklist.
+
+     Ela nasce VAZIA: um ✓ desenhado antes de qualquer clique faz a tarefa
+     parecer já concluída, e a lista inteira parece feita. O ✓ só aparece
+     esmaecido no hover, como prévia do que o clique vai fazer.
+
+     A trava do pai (RN-14) aparece como desabilitado + motivo no title,
+     antecipando o 409. */
   .btn-concluir {
     flex-shrink: 0;
-    width: 30px; height: 30px;
+    width: 26px; height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 2px solid var(--border);
     background: transparent;
-    border-radius: 9px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: .9rem;
+    font-size: .85rem;
     line-height: 1;
     color: var(--tomado);
     transition: border-color .15s, background .15s, transform .1s;
   }
+  .btn-concluir::after { content: '✓'; opacity: 0; transition: opacity .12s; }
   .btn-concluir:hover:not(:disabled) { border-color: var(--tomado); background: var(--tomado-bg); }
+  .btn-concluir:hover:not(:disabled)::after { opacity: .5; }
   .btn-concluir:active:not(:disabled) { transform: scale(.92); }
   .btn-concluir:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* Caixa já marcada: não é botão, é o registro do que aconteceu. Substitui o
+     antigo chip "✓ Concluída" do lado direito — com a caixa à esquerda, o chip
+     repetia em palavras o que o desenho já diz, e a data continua na meta. */
+  .tarefa-marca {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: .85rem;
+    line-height: 1;
+    background: var(--tomado-bg);
+    color: var(--tomado);
+  }
+  .tarefa-marca.cancelada { background: var(--anulado-bg); color: var(--anulado); }
+  .btn-concluir.sub, .tarefa-marca.sub { width: 21px; height: 21px; border-radius: 6px; font-size: .7rem; }
+  .tarefa-marca.agendada { background: transparent; color: var(--muted); }
+  .tarefa-row.agendada { opacity: .8; }
 
   /* ── Subtarefas ── */
   .subtarefa-lista { margin: 8px 0 0 14px; padding-left: 12px; border-left: 2px solid var(--border); }
@@ -973,9 +1021,10 @@
   }
   .tarefa-contador { font-size: .74rem; font-weight: 700; color: var(--muted); }
 
-  /* Seção de finalizadas: recolhida por padrão, porque o que importa é o que
-     está em aberto. O <details> nativo já dá o comportamento inteiro. */
-  .tarefa-finalizadas > summary {
+  /* Bloco recolhível, usado por "Agendadas" e por "Concluídas". O <details>
+     nativo já dá o comportamento inteiro — a diferença entre os dois é só o
+     atributo `open`, decidido na renderização. */
+  .tarefa-recolhivel > summary {
     cursor: pointer;
     font-size: .74rem;
     font-weight: 700;
@@ -985,9 +1034,9 @@
     margin-bottom: 8px;
     list-style: none;
   }
-  .tarefa-finalizadas > summary::-webkit-details-marker { display: none; }
-  .tarefa-finalizadas > summary::before { content: '▸ '; }
-  .tarefa-finalizadas[open] > summary::before { content: '▾ '; }
+  .tarefa-recolhivel > summary::-webkit-details-marker { display: none; }
+  .tarefa-recolhivel > summary::before { content: '▸ '; }
+  .tarefa-recolhivel[open] > summary::before { content: '▾ '; }
 
   .tarefa-repetir-check {
     display: flex;
@@ -3517,7 +3566,13 @@ function tarefaAtrasada(t) {
 function contarPendentes() {
   let pendentes = 0, atrasadas = 0;
   for (const t of tarefasCache) {
-    if (t.status === 'PENDENTE') { pendentes++; if (tarefaAtrasada(t)) atrasadas++; }
+    // Agendada não é pendência de hoje (RN-32) e não entra na conta. Quem
+    // decide isso é o servidor, no campo `agendada` — a mesma conta que o bot
+    // do Telegram usa, pra os dois números nunca divergirem.
+    if (t.status === 'PENDENTE' && !t.agendada) {
+      pendentes++;
+      if (tarefaAtrasada(t)) atrasadas++;
+    }
     for (const s of t.subtarefas) if (s.status === 'PENDENTE') pendentes++;
   }
   return { pendentes, atrasadas };
@@ -3548,7 +3603,10 @@ function renderTarefas() {
   }
 
   const atrasadas = tarefasCache.filter(tarefaAtrasada);
-  const pendentes = tarefasCache.filter(t => t.status === 'PENDENTE' && !tarefaAtrasada(t));
+  const agendadas = tarefasCache.filter(t => t.agendada);
+  const pendentes = tarefasCache.filter(
+    t => t.status === 'PENDENTE' && !t.agendada && !tarefaAtrasada(t)
+  );
   const finalizadas = tarefasCache.filter(t => t.status !== 'PENDENTE');
 
   let html = '';
@@ -3567,8 +3625,19 @@ function renderTarefas() {
   if (!atrasadas.length && !pendentes.length) {
     html += `<div class="empty"><span class="icon">✅</span>Nada em aberto. 👌</div>`;
   }
+  // Recorrentes que ainda não chegaram na janela (RN-32): recolhidas, mas
+  // alcançáveis. Sumir de vez deixaria a série sem como ser editada nem
+  // encerrada durante todo o intervalo.
+  if (agendadas.length) {
+    html += `<details class="tarefa-grupo tarefa-recolhivel">
+      <summary>Agendadas (${agendadas.length})</summary>
+      ${agendadas.map(tarefaRowHtml).join('')}
+    </details>`;
+  }
   if (finalizadas.length) {
-    html += `<details class="tarefa-grupo tarefa-finalizadas">
+    // Aberta por padrão: ver o que se fez nos últimos dias é metade do valor
+    // de uma lista de tarefas, e uma seção fechada some da vista.
+    html += `<details class="tarefa-grupo tarefa-recolhivel" open>
       <summary>Concluídas nos últimos ${JANELA_FINALIZADAS_DIAS} dias (${finalizadas.length})</summary>
       ${finalizadas.map(tarefaRowHtml).join('')}
     </details>`;
@@ -3595,24 +3664,31 @@ function tarefaRowHtml(t) {
   // antecipa o 409 em vez de deixar o usuário descobrir por um toast de erro.
   // A regra continua sendo do servidor; aqui só se evita a viagem.
   const travado = subsPendentes > 0;
-  const acao = finalizada
-    ? `<span class="tarefa-chip ${t.status === 'CANCELADA' ? 'cancelada' : ''}">${t.status === 'CANCELADA' ? '✕ Cancelada' : '✓ Concluída'}</span>`
-    : `<button class="btn-concluir" onclick="concluirTarefa('${t.id}')" ${travado ? 'disabled' : ''}
-         title="${travado ? 'Conclua as subtarefas primeiro' : 'Concluir'}"
-         aria-label="Concluir ${escHtml(t.titulo)}">✓</button>`;
+  // Agendada não ganha caixa de marcar: oferecer o botão era exatamente o que
+  // deixava concluir hoje uma ocorrência de daqui a doze dias, reiniciando o
+  // ciclo para a mesma data. Quem quiser registrar que fez adiantado usa o ⋯.
+  const marca = finalizada
+    ? `<span class="tarefa-marca ${t.status === 'CANCELADA' ? 'cancelada' : ''}"
+         aria-label="${t.status === 'CANCELADA' ? 'Cancelada' : 'Concluída'}">${t.status === 'CANCELADA' ? '✕' : '✓'}</span>`
+    : t.agendada
+      ? '<span class="tarefa-marca agendada" aria-label="Agendada">🕑</span>'
+      : `<button class="btn-concluir" onclick="concluirTarefa('${t.id}')" ${travado ? 'disabled' : ''}
+           title="${travado ? 'Conclua as subtarefas primeiro' : 'Concluir'}"
+           aria-label="Concluir ${escHtml(t.titulo)}"></button>`;
 
   const classes = ['tarefa-row'];
+  if (t.agendada) classes.push('agendada');
   if (atrasada) classes.push('atrasada');
   else if (t.prioridade) classes.push(`prio-${t.prioridade}`);
   if (finalizada) classes.push('finalizada');
 
   return `<div>
     <div class="${classes.join(' ')}">
+      ${marca}
       <div class="tarefa-info">
         <div class="tarefa-titulo">${escHtml(t.titulo)}</div>
         ${meta.length ? `<div class="tarefa-meta">${meta.join('')}</div>` : ''}
       </div>
-      ${acao}
       <button class="btn-opcoes" onclick="abrirOpcoesTarefa('${t.id}')" aria-label="Opções de ${escHtml(t.titulo)}">⋯</button>
     </div>
     ${subs.length ? subtarefasHtml(t, subs) : ''}
@@ -3623,9 +3699,10 @@ function subtarefasHtml(t, subs) {
   const itens = subs.map(s => `
     <div class="subtarefa-row ${s.status !== 'PENDENTE' ? 'finalizada' : ''}">
       ${s.status === 'PENDENTE'
-        ? `<button class="btn-concluir" style="width:22px;height:22px;font-size:.7rem"
-             onclick="concluirTarefa('${s.id}')" aria-label="Concluir ${escHtml(s.titulo)}">✓</button>`
-        : `<span class="btn-concluir" style="width:22px;height:22px;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;border-color:transparent">${s.status === 'CANCELADA' ? '✕' : '✓'}</span>`}
+        ? `<button class="btn-concluir sub" onclick="concluirTarefa('${s.id}')"
+             aria-label="Concluir ${escHtml(s.titulo)}"></button>`
+        : `<span class="tarefa-marca sub ${s.status === 'CANCELADA' ? 'cancelada' : ''}"
+             aria-label="${s.status === 'CANCELADA' ? 'Cancelada' : 'Concluída'}">${s.status === 'CANCELADA' ? '✕' : '✓'}</span>`}
       <span class="subtarefa-titulo">${escHtml(s.titulo)}</span>
       <button class="btn-opcoes" onclick="abrirOpcoesTarefa('${s.id}')" aria-label="Opções de ${escHtml(s.titulo)}">⋯</button>
     </div>`).join('');
@@ -3696,6 +3773,10 @@ function abrirOpcoesTarefa(id) {
 
   if (finalizada) {
     opcoes.push({ rotulo: '↩️ Reabrir', fn: `reabrirTarefa('${id}')` });
+  } else if (item.agendada) {
+    // A ocorrência ainda não chegou na janela, mas às vezes a gente faz antes.
+    // O caminho existe, só não fica na lista ativa tentando o clique.
+    opcoes.push({ rotulo: '✓ Já fiz isso', fn: `concluirTarefa('${id}')` });
   } else {
     // Os dois rótulos existem com esse texto de propósito: a diferença entre
     // cancelar e excluir (RN-09) é invisível numa tarefa normal e decisiva
