@@ -7,8 +7,19 @@
 // manifest.json, ícones) — senão o navegador continua servindo a versão
 // antiga guardada. Foi o que aconteceu com a trava de orientação no
 // manifest: sem bump, o PWA instalado seguia lendo o manifest velho.
-const CACHE_NAME = 'dld-shell-v6';  // v6: módulo de Agenda implementado (o card deixa de ser "em breve")
+const CACHE_NAME = 'dld-shell-v7';  // v7: redeploy do v6 (Agenda) — ver a nota sobre o build travado
+// v6: módulo de Agenda implementado (o card deixa de ser "em breve").
 // v5: módulo de Tasks implementado.
+//
+// Sobre o v7: o commit do v6 subiu certo (a branch remota recebeu), mas o build
+// do Pages ficou preso em "queued" sem alocar runner nenhum, com o GitHub
+// reportando tudo operacional. O GitHub Pages tem um limite SOFT de 10 builds
+// por hora quando a origem é "deploy from a branch", que é o caso deste repo —
+// e cancelar e refazer o deploy gasta build desse orçamento em vez de destravar.
+// O v7 existe para forçar um commit novo depois que a janela da hora virou.
+// Se isso voltar a acontecer: espere a hora fechar em vez de re-rodar, ou troque
+// a origem do Pages para um workflow próprio do Actions, ao qual o limite não se
+// aplica.
 //
 // ⚠️ O bump para v5 NÃO foi feito quando Tasks entrou: o `index.html` foi
 // alterado em 13/09 e este arquivo ficou em v4, de 12/09. No navegador comum
