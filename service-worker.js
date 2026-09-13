@@ -7,7 +7,20 @@
 // manifest.json, ícones) — senão o navegador continua servindo a versão
 // antiga guardada. Foi o que aconteceu com a trava de orientação no
 // manifest: sem bump, o PWA instalado seguia lendo o manifest velho.
-const CACHE_NAME = 'dld-shell-v4';  // v4: grade compacta, acordeão, configurações, editar/excluir medicamento, card Agenda
+const CACHE_NAME = 'dld-shell-v6';  // v6: módulo de Agenda implementado (o card deixa de ser "em breve")
+// v5: módulo de Tasks implementado.
+//
+// ⚠️ O bump para v5 NÃO foi feito quando Tasks entrou: o `index.html` foi
+// alterado em 13/09 e este arquivo ficou em v4, de 12/09. No navegador comum
+// isso passa despercebido (o HTML é revalidado), mas no PWA instalado o shell
+// vem do cache — ou seja, o card de Tasks pode nunca ter aparecido lá. É
+// exatamente a falha que o comentário acima já descrevia sobre o manifest, e
+// ela voltou porque o bump depende de alguém lembrar.
+//
+// Os dois módulos entram juntos neste v6. Se o card de Tasks continuar
+// ausente no aparelho depois do deploy, o problema não é este arquivo — é o
+// service worker antigo ainda ativo, e o conserto é fechar todas as abas do
+// app (ou desinstalar e reinstalar o PWA) uma única vez.
 const SHELL_FILES = [
   './',
   './index.html',

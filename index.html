@@ -339,6 +339,9 @@
   }
 
   /* Cards de módulos ainda não implementados */
+  /* Sem uso desde 13/09/2026: com a Agenda, nenhum card está mais "em breve".
+     As regras ficam porque o próximo módulo, se houver, entra de novo por um
+     placeholder — e reescrevê-las custaria mais que mantê-las. */
   .card-em-breve .card-sub { color: var(--accent); }
   .card-em-breve:not(.open) { border-style: dashed; }
 
@@ -1049,6 +1052,72 @@
   }
   .tarefa-repetir-check input { width: 16px; height: 16px; accent-color: var(--accent); }
 
+  /* ═══════════ Agenda ═══════════
+     Reaproveita .tarefa-grupo, .tarefa-recolhivel, .tarefa-info e .btn-opcoes.
+     O que NÃO se reaproveita é a caixa de marcar: um compromisso não é feito
+     (RN-02), e herdar .tarefa-row inteiro traria o ✓ de brinde — que é
+     exatamente o que não pode atravessar entre os dois cards. No lugar dela,
+     a hora ocupa a coluna da esquerda. */
+  .agenda-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    margin-bottom: 6px;
+  }
+  .agenda-row:last-child { margin-bottom: 0; }
+
+  /* Largura fixa para os horários alinharem em coluna. O evento de dia inteiro
+     recebe um traço, e não um horário inventado (00:00 seria mentira). */
+  .agenda-hora {
+    flex: 0 0 46px;
+    text-align: right;
+    font-size: .82rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+  }
+  .agenda-hora.dia-todo { color: var(--muted); font-weight: 600; }
+
+  .agenda-titulo {
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Dois esmaecimentos diferentes, e eles se combinam:
+     passado = opacidade (é história, não erro);
+     cancelado = risco (foi uma decisão, e ela fica registrada). */
+  .agenda-row.passado { opacity: .65; }
+  .agenda-row.cancelado .agenda-titulo { text-decoration: line-through; color: var(--muted); }
+  .agenda-row.cancelado .agenda-hora { color: var(--muted); }
+
+  /* Hoje é o único dia com destaque próprio: é o que decide a sua manhã. */
+  .agenda-row.hoje { border-color: var(--accent); }
+
+  .agenda-dia {
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 12px 0 6px;
+  }
+  .agenda-dia:first-child { margin-top: 0; }
+  .agenda-dia.destaque { color: var(--accent); }
+
+  .agenda-vazio-hoje {
+    font-size: .86rem;
+    color: var(--muted);
+    padding: 6px 2px 10px;
+  }
+
   /* O <select> herda a aparência do .field input para não destoar — é o único
      campo de seleção do app até aqui. */
   .field select {
@@ -1584,20 +1653,28 @@
   </div>
 
   <!-- ═══════════════ Card: Agenda ═══════════════ -->
-  <div class="card card-em-breve" id="card-agenda">
+  <div class="card" id="card-agenda">
     <div class="card-header" role="button" tabindex="0" aria-expanded="false"
          onclick="toggleCard('agenda')"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('agenda');}">
       <span class="card-icone">📅</span>
       <span class="card-nome">Agenda</span>
-      <span class="card-sub">Em breve</span>
+      <!-- Sem badge, por decisão do responsável (decisão 6 do discovery). O
+           card fechado não conta nada. O custo está assumido: não dá para saber
+           que existe um exame amanhã sem abrir — e é por isso que o bot, que
+           avisa na véspera, deixa de ser um extra deste módulo e passa a ser o
+           canal principal dele. -->
       <span class="chevron">▾</span>
     </div>
-    <div class="card-body">
-      <div class="empty">
-        <span class="icon">📅</span>
-        Módulo ainda não implementado.
+
+    <div class="card-body" id="agenda-body">
+      <div class="list-header">
+        <!-- Sem navegação por período, como em Tasks: uma agenda navegável por
+             mês seria uma grade de calendário, que está fora do escopo. -->
+        <span class="date-label-btn" style="cursor:default">Seus compromissos</span>
+        <button class="btn-icon-add" aria-label="Adicionar compromisso" onclick="abrirModalCompromisso()">+</button>
       </div>
+      <div id="agenda-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 
@@ -1845,6 +1922,51 @@
   </div>
 </div>
 
+<!-- Modal: Novo compromisso / editar compromisso -->
+<div class="modal-backdrop" id="modal-backdrop-compromisso" onclick="fecharModalSeFundo(event, 'modal-backdrop-compromisso', fecharModalCompromisso)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-compromisso">
+    <div class="modal-header">
+      <h2 id="modal-titulo-compromisso">Novo compromisso</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalCompromisso()">×</button>
+    </div>
+    <!-- Três campos: o menor formulário do app. -->
+    <form id="compromisso-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="compromisso-titulo">Título</label>
+        <input id="compromisso-titulo" type="text" placeholder="Ex: Dentista" required>
+      </div>
+      <div class="field">
+        <label for="compromisso-data">Data</label>
+        <input id="compromisso-data" type="date" required>
+      </div>
+      <div class="field">
+        <label for="compromisso-hora">Hora (opcional)</label>
+        <input id="compromisso-hora" type="time">
+        <!-- O botão existe porque o <input type="time"> não oferece um jeito
+             óbvio de voltar a ficar vazio em todo navegador — e sem ele o
+             usuário não teria como transformar um compromisso com horário num
+             evento de dia inteiro. É este botão que exerce o `{"hora": null}`
+             explícito do contrato (§7.2). -->
+        <button type="button" class="btn-sub-add" id="compromisso-limpar-hora"
+                onclick="limparHoraCompromisso()" style="display:none">limpar a hora (deixar o dia todo)</button>
+        <p class="field-aviso">Sem hora, o compromisso vale para o dia todo e aparece no topo daquele dia.</p>
+      </div>
+      <button class="btn-add" type="submit" id="compromisso-form-submit">Adicionar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Opções do compromisso -->
+<div class="modal-backdrop" id="modal-backdrop-opcoes-compromisso" onclick="fecharModalSeFundo(event, 'modal-backdrop-opcoes-compromisso', fecharOpcoesCompromisso)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-opcoes-compromisso">
+    <div class="modal-header">
+      <h2 id="modal-titulo-opcoes-compromisso">Opções</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharOpcoesCompromisso()">×</button>
+    </div>
+    <div class="opcoes-lista" id="opcoes-lista-compromisso"></div>
+  </div>
+</div>
+
 <!-- Modal: Opções do hábito (marcar status / editar / excluir) -->
 <div class="modal-backdrop" id="modal-backdrop-opcoes" onclick="fecharModalSeFundo(event, 'modal-backdrop-opcoes', fecharOpcoesHabito)">
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-opcoes">
@@ -2005,15 +2127,17 @@ document.addEventListener('keydown', e => {
    módulo. Reabrir depois de minimizado NUNCA dispara um novo fetch —
    só alterna visibilidade (classe "open").
    ══════════════════════════════════════════════════════════════════ */
-/* `init: null` = módulo ainda não implementado (card só mostra "em breve",
-   nenhuma chamada de API acontece nem na primeira expansão). */
+/* `init: null` significaria "módulo ainda não implementado" (card só mostra
+   "em breve", nenhuma chamada de API nem na primeira expansão). Com a Agenda,
+   nenhuma entrada está mais nesse estado: Agenda foi o último card a sair de
+   "Em breve". */
 const cardState = {
   medicamentos: { iniciado: false, open: false, init: initMedicamentos },
   habitos:      { iniciado: false, open: false, init: initHabitos },
   agua:         { iniciado: false, open: false, init: initAgua },
   contas:       { iniciado: false, open: false, init: initContas },
   tasks:        { iniciado: false, open: false, init: initTarefas },
-  agenda:       { iniciado: false, open: false, init: null },
+  agenda:       { iniciado: false, open: false, init: initAgenda },
 };
 
 function toggleCard(nomeModulo) {
@@ -3963,6 +4087,332 @@ document.getElementById('subtarefa-form').addEventListener('submit', async e => 
     await carregarTarefas();
   } catch {
     toast('Erro ao adicionar a subtarefa');
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   AGENDA
+   ══════════════════════════════════════════════════════════════════
+   Uma lista cronológica, sem navegação por período e sem caixa de
+   marcar. A janela de passado é decidida AQUI e mandada pronta ao
+   servidor (RN-13) — trocar 30 por 90 é mudar a constante abaixo, e
+   nada no backend muda junto.
+
+   A diferença mais importante em relação ao card de Tasks, que fica
+   logo acima na tela: aqui NÃO existe caixa de marcar. Um compromisso
+   não é feito (RN-02); quem o encerra é o relógio. A coluna da
+   esquerda é da hora.
+   ══════════════════════════════════════════════════════════════════ */
+const JANELA_PASSADO_DIAS = 30;
+
+let agendaCache = [];
+let compromissoEditandoId = null;
+let opcoesCompromissoId = null;
+
+function initAgenda() {
+  carregarAgenda();
+}
+
+function cortePassado() {
+  const d = new Date();
+  d.setDate(d.getDate() - JANELA_PASSADO_DIAS);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+async function carregarAgenda() {
+  const listEl = document.getElementById('agenda-list');
+  listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const res = await fetch(`${API}/agenda?desde=${cortePassado()}`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    agendaCache = await res.json();
+    renderAgenda();
+  } catch {
+    listEl.innerHTML =
+      `<div class="empty"><span class="icon">⚠️</span>Não foi possível conectar ao servidor.<br><small>Verifique sua conexão e tente recarregar a página.</small></div>`;
+  }
+}
+
+/* "Passado" não é status: é comparação de datas feita aqui (RN-03), como
+   "vencida" em Contas e "atrasada" em Tasks. Nada é gravado quando um dia
+   vira. */
+function dataISOAmanha() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+
+/* Cabeçalho do dia. Datas próximas ganham nome ("Hoje", "Amanhã") porque é
+   assim que a gente pensa nelas; as de longe ganham o dia da semana, que é o
+   que decide se dá para ir. Formatado sem new Date(iso) puro: 'new
+   Date("2026-09-10")' é lido como UTC e volta o dia anterior no nosso fuso. */
+function rotuloDia(iso) {
+  if (iso === dataISOHoje()) return 'Hoje';
+  if (iso === dataISOAmanha()) return 'Amanhã';
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  const d = new Date(ano, mes - 1, dia);
+  // O ano só aparece quando é outro. Como a agenda não tem teto (RN-14), um
+  // "11/04" solto num compromisso marcado para daqui a sete meses é ambíguo
+  // justamente no caso em que a data importa mais.
+  const anoAtual = Number(dataISOHoje().slice(0, 4));
+  const sufixo = ano !== anoAtual ? `/${ano}` : '';
+  return `${DIAS_SEMANA[d.getDay()]}, ${String(dia).padStart(2,'0')}/${String(mes).padStart(2,'0')}${sufixo}`;
+}
+
+function horaCurta(hora) {
+  return hora ? hora.slice(0, 5) : null;   // "14:00:00" -> "14:00"
+}
+
+function agendaRowHtml(c) {
+  const hoje = dataISOHoje();
+  const cancelado = c.status === 'CANCELADO';
+  const passado = c.data < hoje;
+  const hora = horaCurta(c.hora);
+
+  const classes = ['agenda-row'];
+  if (passado) classes.push('passado');
+  if (cancelado) classes.push('cancelado');
+  if (c.data === hoje && !cancelado) classes.push('hoje');
+
+  return `<div class="${classes.join(' ')}">
+    <span class="agenda-hora${hora ? '' : ' dia-todo'}">${hora || '—'}</span>
+    <div class="tarefa-info">
+      <div class="agenda-titulo">${escHtml(c.titulo)}</div>
+    </div>
+    <button class="btn-opcoes" onclick="abrirOpcoesCompromisso('${c.id}')" aria-label="Opções de ${escHtml(c.titulo)}">⋯</button>
+  </div>`;
+}
+
+/* Agrupa por data preservando a ordem que o backend já entregou (RN-12:
+   data, depois sem-hora, depois hora, depois título). Nada é reordenado
+   aqui — só quebrado em blocos de dia. */
+function porDia(lista) {
+  const grupos = [];
+  for (const c of lista) {
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.data === c.data) ultimo.itens.push(c);
+    else grupos.push({ data: c.data, itens: [c] });
+  }
+  return grupos;
+}
+
+function renderAgenda() {
+  const el = document.getElementById('agenda-list');
+  const hoje = dataISOHoje();
+
+  const passados = agendaCache.filter(c => c.data < hoje);
+  const deHoje   = agendaCache.filter(c => c.data === hoje);
+  const futuros  = agendaCache.filter(c => c.data > hoje);
+
+  if (!agendaCache.length) {
+    el.innerHTML = `<div class="empty"><span class="icon">📅</span>Nenhum compromisso marcado.</div>`;
+    return;
+  }
+
+  let html = '';
+
+  // Hoje aparece SEMPRE, mesmo vazio: "hoje está livre" é uma informação, e
+  // não a ausência de uma.
+  html += `<div class="tarefa-grupo">
+    <p class="agenda-dia destaque">Hoje</p>
+    ${deHoje.length
+      ? deHoje.map(agendaRowHtml).join('')
+      : '<p class="agenda-vazio-hoje">Nada marcado para hoje. 👌</p>'}
+  </div>`;
+
+  if (futuros.length) {
+    const blocos = porDia(futuros).map(g =>
+      `<p class="agenda-dia">${rotuloDia(g.data)}</p>${g.itens.map(agendaRowHtml).join('')}`
+    ).join('');
+    html += `<div class="tarefa-grupo">${blocos}</div>`;
+  }
+
+  // Últimos 30 dias, recolhido e em ordem DECRESCENTE: o passado se lê do
+  // mais recente para o mais antigo. Reaproveita o mesmo <details> que Tasks
+  // já usa em "Agendadas" e "Concluídas".
+  if (passados.length) {
+    const blocos = porDia(passados).reverse().map(g =>
+      `<p class="agenda-dia">${rotuloDia(g.data)}</p>${g.itens.map(agendaRowHtml).join('')}`
+    ).join('');
+    html += `<details class="tarefa-grupo tarefa-recolhivel">
+      <summary>Últimos ${JANELA_PASSADO_DIAS} dias (${passados.length})</summary>
+      ${blocos}
+    </details>`;
+  }
+
+  el.innerHTML = html;
+}
+
+/* ── Ações ── */
+
+function encontrarCompromisso(id) {
+  return agendaCache.find(c => c.id === id) || null;
+}
+
+function abrirOpcoesCompromisso(id) {
+  const c = encontrarCompromisso(id);
+  if (!c) return;
+  opcoesCompromissoId = id;
+
+  const opcoes = [];
+  // Os dois rótulos existem com esse texto de propósito, mesmo cuidado de
+  // "Desisti dessa vez" × "Não quero mais isso" em Tasks: a diferença entre
+  // desmarcar e excluir (RN-07) só pode ser explicada pelo nome.
+  if (c.status === 'CANCELADO') {
+    opcoes.push({ rotulo: '↩️ Remarcar', fn: `remarcarCompromisso('${id}')` });
+  } else {
+    opcoes.push({ rotulo: '🚫 Desmarcar', fn: `desmarcarCompromisso('${id}')` });
+  }
+  opcoes.push({ rotulo: '✏️ Editar', fn: `abrirModalCompromisso('${id}')` });
+  opcoes.push({ rotulo: '🗑️ Excluir', fn: `excluirCompromisso('${id}')`, perigo: true });
+
+  document.getElementById('modal-titulo-opcoes-compromisso').textContent = c.titulo;
+  document.getElementById('opcoes-lista-compromisso').innerHTML = opcoes.map(o =>
+    `<button class="opcao-btn${o.perigo ? ' perigo' : ''}" onclick="fecharOpcoesCompromisso(); ${o.fn}">${o.rotulo}</button>`
+  ).join('') + (c.status === 'CANCELADO'
+    ? ''
+    : '<p class="field-aviso">Desmarcar mantém o compromisso à vista, riscado. Excluir tira da agenda — é para o que foi cadastrado por engano.</p>');
+
+  document.getElementById('modal-backdrop-opcoes-compromisso').classList.add('open');
+}
+
+function fecharOpcoesCompromisso() {
+  document.getElementById('modal-backdrop-opcoes-compromisso').classList.remove('open');
+  opcoesCompromissoId = null;
+}
+
+async function mudarStatusCompromisso(id, status, mensagem) {
+  try {
+    const res = await fetch(`${API}/agenda/${id}/status`, {
+      method: 'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ status }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => ({}));
+      toast(corpo.message || 'Não foi possível atualizar o compromisso');
+      return;
+    }
+    toast(mensagem);
+    await carregarAgenda();
+  } catch {
+    toast('Erro ao atualizar o compromisso');
+  }
+}
+
+function desmarcarCompromisso(id) { mudarStatusCompromisso(id, 'CANCELADO', 'Desmarcado'); }
+function remarcarCompromisso(id)  { mudarStatusCompromisso(id, 'AGENDADO', 'Remarcado ✓'); }
+
+async function excluirCompromisso(id) {
+  const c = encontrarCompromisso(id);
+  if (!c) return;
+
+  const ok = await confirmar({
+    titulo: 'Excluir compromisso',
+    texto: `"${c.titulo}" sai da agenda. Isso não é o mesmo que desmarcar: desmarcar guarda que ele existiu e foi cancelado; isso apaga o registro da sua vista.`,
+    acao: 'Excluir', perigo: true,
+  });
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`${API}/agenda/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok && res.status !== 204) throw new Error();
+    toast('Excluído');
+    await carregarAgenda();
+  } catch {
+    toast('Erro ao excluir');
+  }
+}
+
+/* ── Modal de cadastro e edição ── */
+
+function atualizarBotaoLimparHora() {
+  const tem = !!document.getElementById('compromisso-hora').value;
+  document.getElementById('compromisso-limpar-hora').style.display = tem ? '' : 'none';
+}
+
+function limparHoraCompromisso() {
+  document.getElementById('compromisso-hora').value = '';
+  atualizarBotaoLimparHora();
+}
+
+function abrirModalCompromisso(id = null) {
+  compromissoEditandoId = id;
+  const form = document.getElementById('compromisso-form');
+  const titulo = document.getElementById('modal-titulo-compromisso');
+  const btn = document.getElementById('compromisso-form-submit');
+
+  form.reset();
+
+  if (id) {
+    const c = encontrarCompromisso(id);
+    titulo.textContent = 'Editar compromisso';
+    if (c) {
+      document.getElementById('compromisso-titulo').value = c.titulo;
+      document.getElementById('compromisso-data').value = c.data;
+      document.getElementById('compromisso-hora').value = horaCurta(c.hora) || '';
+    }
+    btn.textContent = 'Salvar';
+  } else {
+    titulo.textContent = 'Novo compromisso';
+    // Data pré-preenchida com hoje: é o palpite certo na maioria das vezes, e
+    // um campo de data vazio é o tipo de atrito que faz não cadastrar.
+    document.getElementById('compromisso-data').value = dataISOHoje();
+    btn.textContent = 'Adicionar';
+  }
+
+  atualizarBotaoLimparHora();
+  document.getElementById('modal-backdrop-compromisso').classList.add('open');
+  setTimeout(() => document.getElementById('compromisso-titulo').focus(), 200);
+}
+
+function fecharModalCompromisso() {
+  document.getElementById('modal-backdrop-compromisso').classList.remove('open');
+  compromissoEditandoId = null;
+}
+
+document.getElementById('compromisso-hora').addEventListener('input', atualizarBotaoLimparHora);
+
+document.getElementById('compromisso-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('compromisso-form-submit');
+  const titulo = document.getElementById('compromisso-titulo').value.trim();
+  const data = document.getElementById('compromisso-data').value;
+  const hora = document.getElementById('compromisso-hora').value || null;
+
+  if (!titulo) { toast('Informe o título'); return; }
+  if (!data) { toast('Informe a data'); return; }
+
+  btn.disabled = true;
+  try {
+    const editando = compromissoEditandoId;
+    // As três chaves vão SEMPRE, inclusive `hora: null`. É isso que apaga a
+    // hora de um compromisso que virou evento de dia inteiro: o backend usa
+    // `exclude_unset`, então omitir a chave significaria "não mexa" e o botão
+    // de limpar a hora não funcionaria (§7.2 do documento do módulo).
+    const res = await fetch(editando ? `${API}/agenda/${editando}` : `${API}/agenda`, {
+      method: editando ? 'PATCH' : 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ titulo, data, hora }),
+    });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => ({}));
+      toast(corpo.message || 'Erro ao salvar o compromisso');
+      return;
+    }
+    toast(editando ? 'Compromisso atualizado ✓' : `${titulo} adicionado ✓`);
+    fecharModalCompromisso();
+    await carregarAgenda();
+  } catch {
+    toast('Erro ao salvar o compromisso');
+  } finally {
+    btn.disabled = false;
   }
 });
 
