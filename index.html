@@ -9,6 +9,8 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <script>
+  // Aplica o tema salvo ANTES do primeiro paint. O script principal fica no fim
+  // do body — de lá, a página já teria pintado no tema errado e piscaria.
   try {
     var _t = localStorage.getItem('dld_tema');
     if (_t === 'light' || _t === 'dark') document.documentElement.setAttribute('data-theme', _t);
@@ -1068,17 +1070,22 @@
   }
   .agenda-row:last-child { margin-bottom: 0; }
 
-  /* Largura fixa para os horários alinharem em coluna. O evento de dia inteiro
-     recebe um traço, e não um horário inventado (00:00 seria mentira). */
+  /* O horário vem DEPOIS do título, encostado à direita — o `flex: 1` do
+     .tarefa-info empurra ele para lá e cria o espaçamento sozinho.
+
+     A primeira versão punha a hora numa coluna fixa à esquerda, à moda de
+     calendário, e o evento de dia inteiro recebia um traço para segurar o
+     alinhamento. O traço não se justificava: ele ocupava o lugar mais visível
+     da linha para dizer "aqui não tem nada". Sem hora, agora, a linha é só o
+     título — a ausência não desenha. */
   .agenda-hora {
-    flex: 0 0 46px;
-    text-align: right;
+    flex: 0 0 auto;
     font-size: .82rem;
     font-weight: 700;
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: tabular-nums;  /* mantém a coluna da direita alinhada */
     color: var(--accent);
+    white-space: nowrap;
   }
-  .agenda-hora.dia-todo { color: var(--muted); font-weight: 600; }
 
   .agenda-titulo {
     font-size: .92rem;
@@ -4175,12 +4182,18 @@ function agendaRowHtml(c) {
   if (cancelado) classes.push('cancelado');
   if (c.data === hoje && !cancelado) classes.push('hoje');
 
+  // Título primeiro, sempre no mesmo canto esquerdo; a hora vem depois, à
+  // direita. Sem hora, NADA é desenhado no lugar dela: o evento de dia inteiro
+  // é uma linha só com o título, e a ausência de horário se lê pela ausência
+  // mesmo. O `aria-label` do ⋯ carrega a hora junto para quem usa leitor de
+  // tela não perder a informação que virou posicional.
   return `<div class="${classes.join(' ')}">
-    <span class="agenda-hora${hora ? '' : ' dia-todo'}">${hora || '—'}</span>
     <div class="tarefa-info">
       <div class="agenda-titulo">${escHtml(c.titulo)}</div>
     </div>
-    <button class="btn-opcoes" onclick="abrirOpcoesCompromisso('${c.id}')" aria-label="Opções de ${escHtml(c.titulo)}">⋯</button>
+    ${hora ? `<span class="agenda-hora">${hora}</span>` : ''}
+    <button class="btn-opcoes" onclick="abrirOpcoesCompromisso('${c.id}')"
+            aria-label="Opções de ${escHtml(c.titulo)}${hora ? `, ${hora}` : ', dia todo'}">⋯</button>
   </div>`;
 }
 
