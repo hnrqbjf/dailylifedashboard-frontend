@@ -9,8 +9,6 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <script>
-  // Aplica o tema salvo ANTES do primeiro paint. O script principal fica no fim
-  // do body — de lá, a página já teria pintado no tema errado e piscaria.
   try {
     var _t = localStorage.getItem('dld_tema');
     if (_t === 'light' || _t === 'dark') document.documentElement.setAttribute('data-theme', _t);
