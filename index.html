@@ -883,6 +883,19 @@
   }
   .tarefa-grupo-titulo.alerta { color: var(--nao); }
 
+  /* A separação física entre grupos: uma borda que une as linhas do grupo,
+     com o nome dentro. Fundo transparente e borda de 1px de propósito — um
+     segundo fundo aqui criaria cartão-dentro-de-cartão, e as linhas já têm o
+     seu. O que a borda faz é dizer onde o grupo começa e termina. */
+  .tarefa-caixa-grupo {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 10px 12px;
+    margin-bottom: 12px;
+  }
+  .tarefa-caixa-grupo:last-child { margin-bottom: 0; }
+  .tarefa-caixa-grupo > .tarefa-grupo-titulo { margin-bottom: 8px; }
+
   .tarefa-row {
     position: relative;
     background: var(--bg);
@@ -922,12 +935,27 @@
   .tarefa-row.finalizada .tarefa-titulo { text-decoration: line-through; color: var(--muted); }
 
   .tarefa-info { flex: 1; min-width: 0; }
+  /* Título longo quebra em até DUAS linhas em vez de virar "...". No celular
+     isso é a diferença entre ler a tarefa e adivinhar qual é.
+
+     O custo de altura é o mínimo possível: `line-height: 1.25` aperta a
+     entrelinha (era 1.5 por herança), então a primeira linha encolhe ~5px e a
+     segunda custa ~19px. Uma linha curta continua exatamente com a altura de
+     antes — o clamp só cresce quando há texto para a segunda linha.
+
+     `-webkit-line-clamp` tem prefixo mas funciona em todos os navegadores
+     atuais, Firefox incluído; `line-clamp` sem prefixo é recente demais para
+     ficar sozinho. */
   .tarefa-titulo {
     font-size: .95rem;
     font-weight: 600;
-    white-space: nowrap;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;   /* uma URL ou palavra gigante quebra em vez de estourar */
   }
   .tarefa-meta {
     display: flex;
@@ -1018,7 +1046,17 @@
     gap: 8px;
     padding: 5px 0;
   }
-  .subtarefa-titulo { flex: 1; min-width: 0; font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subtarefa-titulo {
+    flex: 1; min-width: 0;
+    font-size: .86rem;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
   .subtarefa-row.finalizada .subtarefa-titulo { text-decoration: line-through; color: var(--muted); }
   .btn-sub-add {
     background: none;
@@ -1879,15 +1917,16 @@
         <input id="tarefa-titulo" type="text" placeholder="Ex: Levar o carro na revisão" required>
       </div>
       <div class="field">
-        <label for="tarefa-grupo">Grupo</label>
+        <label for="tarefa-grupo">Grupo (opcional)</label>
         <!-- Input com datalist, e não select: o conjunto de grupos é aberto.
              A lista sugere os que já existem; digitar um nome novo cria o
              grupo na hora, sem migration nem deploy. -->
         <input id="tarefa-grupo" list="tarefa-grupos-usados" maxlength="40"
-               placeholder="Ex: Trabalho" required autocomplete="off">
+               placeholder="Sem grupo" autocomplete="off">
         <datalist id="tarefa-grupos-usados"></datalist>
-        <p class="field-aviso">Maiúsculas e acentos não importam: "Trabalho" e
-          "trabalho" são o mesmo grupo.</p>
+        <p class="field-aviso">Sem grupo, a tarefa fica no topo da lista.
+          Maiúsculas e acentos não importam: "Trabalho" e "trabalho" são o
+          mesmo grupo. Apague o texto para tirar o grupo de uma tarefa.</p>
       </div>
       <div class="field">
         <label for="tarefa-prazo" id="tarefa-prazo-label">Prazo (opcional)</label>
@@ -3783,19 +3822,27 @@ function renderTarefas() {
   // grupos daria dezesseis blocos numa tela que hoje tem quatro. O chip em
   // cada linha resolve o "de onde é isto" nas seções globais.
   if (pendentes.length) {
-    const porGrupo = [...new Set(pendentes.map(t => t.grupo))].sort()
+    // Sem grupo vem primeiro, solto e sem rótulo: é a caixa de entrada, o
+    // estado de quem ainda não classificou (RN-33). Os grupos vêm depois, cada
+    // um dentro de uma borda.
+    const semGrupo = pendentes.filter(t => !t.grupo);
+    const comGrupo = [...new Set(pendentes.filter(t => t.grupo).map(t => t.grupo))].sort()
       .map(g => [g, pendentes.filter(t => t.grupo === g)]);
-    // Um grupo só não vira subtítulo: seria um cabeçalho para dizer o que o
-    // chip de cada linha já diz.
-    const dividir = porGrupo.length > 1;
 
     html += `<div class="tarefa-grupo">
-      ${atrasadas.length && !dividir ? '<p class="tarefa-grupo-titulo">Em aberto</p>' : ''}
-      ${porGrupo.map(([g, itens]) => `
-        ${dividir ? `<p class="tarefa-grupo-titulo">${escHtml(g)}</p>` : ''}
-        ${itens.map(x => tarefaRowHtml(x, !dividir)).join('')}
-      `).join('')}
+      ${atrasadas.length && semGrupo.length ? '<p class="tarefa-grupo-titulo">Em aberto</p>' : ''}
+      ${semGrupo.map(x => tarefaRowHtml(x)).join('')}
     </div>`;
+
+    // Dentro do bloco do grupo o chip nunca aparece: o cabeçalho já diz o
+    // nome, uma vez, em vez de repeti-lo em cada linha. Foi o contrário disso
+    // na primeira versão — com um grupo só, cada linha carregava seu próprio
+    // chip, o que é mais repetitivo, não menos.
+    html += comGrupo.map(([g, itens]) => `
+      <section class="tarefa-caixa-grupo">
+        <p class="tarefa-grupo-titulo">${escHtml(g)}</p>
+        ${itens.map(x => tarefaRowHtml(x, false)).join('')}
+      </section>`).join('');
   }
   if (!atrasadas.length && !pendentes.length) {
     html += `<div class="empty"><span class="icon">✅</span>Nada em aberto. 👌</div>`;
@@ -4085,7 +4132,6 @@ document.getElementById('tarefa-form').addEventListener('submit', async e => {
   const intervalo = repete ? Number(document.getElementById('tarefa-intervalo').value) : null;
 
   if (!titulo) { toast('Informe o título'); return; }
-  if (!grupo) { toast('Informe o grupo'); return; }
   if (repete && (!Number.isInteger(intervalo) || intervalo < 1 || intervalo > 365)) {
     toast('O intervalo deve ser de 1 a 365 dias'); return;
   }
@@ -4097,6 +4143,9 @@ document.getElementById('tarefa-form').addEventListener('submit', async e => {
     const res = await fetch(editando ? `${API}/tarefas/${editando}` : `${API}/tarefas`, {
       method: editando ? 'PATCH' : 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
+      // Na edição, string vazia pede REMOVER o grupo; `null` significaria
+      // "não mexe". Na criação os dois dariam no mesmo, e mandar sempre o
+      // texto mantém uma linha só para os dois caminhos.
       body: JSON.stringify({ titulo, grupo, prazo, prioridade, intervalo_dias: intervalo }),
     });
     if (tratarNaoAutorizado(res)) return;
@@ -4456,7 +4505,6 @@ document.getElementById('compromisso-form').addEventListener('submit', async e =
   const hora = document.getElementById('compromisso-hora').value || null;
 
   if (!titulo) { toast('Informe o título'); return; }
-  if (!grupo) { toast('Informe o grupo'); return; }
   if (!data) { toast('Informe a data'); return; }
 
   btn.disabled = true;
