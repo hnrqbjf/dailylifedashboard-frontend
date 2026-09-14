@@ -7,7 +7,11 @@
 // manifest.json, ícones) — senão o navegador continua servindo a versão
 // antiga guardada. Foi o que aconteceu com a trava de orientação no
 // manifest: sem bump, o PWA instalado seguia lendo o manifest velho.
-const CACHE_NAME = 'dld-shell-v7';  // v7: redeploy do v6 (Agenda) — ver a nota sobre o build travado
+// v8 (14/09/2026): água 480→450 e "Outro valor" como botão, tarefas ordenadas
+// por prioridade com subtarefas recolhíveis, remédios tomados em bloco
+// resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
+// versões chegou a ir para produção separada.
+const CACHE_NAME = 'dld-shell-v8';
 // v6: módulo de Agenda implementado (o card deixa de ser "em breve").
 // v5: módulo de Tasks implementado.
 //

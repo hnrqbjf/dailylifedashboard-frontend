@@ -359,11 +359,57 @@
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 16px;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
     gap: 14px;
     transition: box-shadow .15s;
   }
+
+  /* ── Bloco dos já tomados ──
+     Encolhe tudo o que dá sem virar outra coisa: mesma estrutura de linha,
+     menos respiro e menos contraste. Quem já tomou o remédio não precisa
+     reler o nome dele em corpo 16. */
+  .med-card.compacta {
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    gap: 10px;
+    opacity: .72;
+  }
+  .med-card.compacta .med-nome { font-size: .9rem; font-weight: 500; }
+  .med-card.compacta .med-meta { margin-top: 1px; }
+  .med-card.compacta .btn-status { padding: 6px 10px; }
+
+  .med-tomados {
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-top: 4px;
+  }
+  .med-tomados > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--muted);
+  }
+  .med-tomados > summary::-webkit-details-marker { display: none; }
+  .med-tomados[open] > summary { margin-bottom: 10px; }
+  .med-tomados-titulo { font-size: .85rem; font-weight: 700; }
+  /* A lista de nomes some quando o bloco abre: ali embaixo ela seria a mesma
+     informação duas vezes, uma resumida e outra inteira. */
+  .med-tomados-resumo {
+    font-size: .75rem;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .med-tomados[open] .med-tomados-resumo { display: none; }
 
   .med-info { flex: 1; min-width: 0; }
   .med-nome {
@@ -620,6 +666,51 @@
     transition: opacity .12s, transform .1s;
   }
   .opcao-btn:active { transform: scale(.98); }
+
+  /* ── Status do sistema ──
+     Sem ícone de "tudo certo": num diagnóstico o verde não precisa chamar
+     atenção, só o que está fora do lugar. Por isso o tom padrão é o texto
+     normal e só `bom`, `atencao` e `ruim` mudam de cor. */
+  .diag-bloco { margin-bottom: 18px; }
+  .diag-bloco h3 {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  .diag-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .88rem;
+  }
+  .diag-linha:last-child { border-bottom: none; }
+  .diag-rotulo { color: var(--muted); flex-shrink: 0; }
+  .diag-valor { text-align: right; word-break: break-word; }
+  /* As mesmas três cores que os cards já usam para tomado / pendente / não
+     tomado. Um verde novo só para esta tela seria uma quarta convenção de cor
+     num app que já tem três funcionando, e ela teria de ser redefinida nos
+     dois temas para não sumir no escuro. */
+  .diag-valor.bom { color: var(--tomado); font-weight: 600; }
+  .diag-valor.atencao { color: var(--pendente); font-weight: 600; }
+  .diag-valor.ruim { color: var(--nao); font-weight: 700; }
+  .diag-pontos { display: flex; gap: 4px; }
+  /* Sete quadradinhos, o mais antigo à esquerda. Um buraco no meio da fileira
+     é visível antes de qualquer texto ser lido — que é o ponto. */
+  .diag-ponto {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--border);
+  }
+  .diag-ponto.bom { background: var(--tomado); }
+  .diag-ponto.atencao { background: var(--pendente); }
+  .diag-ponto.ruim { background: var(--nao); }
   .opcao-btn .opcao-icone { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
 
   .opcao-btn.ativo.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   border-color: transparent; }
@@ -719,7 +810,19 @@
   .agua-pct.batida { color: var(--tomado); }
 
   /* Volumes fixos no código — qualquer outro valor passa pelo campo personalizado */
-  .agua-botoes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  /* Quatro volumes em 2×2, e não em fila única: com quatro colunas na largura
+     de um celular cada botão fica mais estreito que o dedo que o aperta.
+     `auto-fit` mantém os quatro lado a lado quando há espaço (tablet, desktop).
+     "Outro" entra aqui, junto dos volumes, porque é a mesma ação — registrar
+     consumo —, só que com o número vindo de um campo. Ajustar total e Editar
+     meta continuam links: aqueles dois CORRIGEM o dia, não registram nada, e
+     dar a eles o mesmo peso convidaria ao toque errado. */
+  .agua-botoes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  .btn-agua-outro { background: transparent; font-weight: 600; }
   .btn-agua {
     border: 1px solid var(--border);
     background: var(--accent-bg);
@@ -1040,6 +1143,26 @@
 
   /* ── Subtarefas ── */
   .subtarefa-lista { margin: 8px 0 0 14px; padding-left: 12px; border-left: 2px solid var(--border); }
+
+  /* Recolher subtarefas: sem borda e sem fundo, ao contrário do ⋯ ao lado.
+     São dois botões vizinhos e só um deles abre coisa — o discreto é o que
+     apenas muda o que já está na tela. O alvo continua com 32px de altura,
+     porque discreto é sobre peso visual, não sobre ser difícil de acertar. */
+  .btn-recolher-subs {
+    flex-shrink: 0;
+    width: 26px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: .8rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: .55;
+    transition: opacity .12s;
+  }
+  .btn-recolher-subs:hover { opacity: 1; }
+  .tarefa-item.subs-recolhidas .subtarefa-lista { display: none; }
   .subtarefa-row {
     display: flex;
     align-items: center;
@@ -1634,12 +1757,12 @@
 
         <div class="agua-botoes">
           <button class="btn-agua" onclick="registrarAgua(200)">+200 ml</button>
-          <button class="btn-agua" onclick="registrarAgua(480)">+480 ml</button>
+          <button class="btn-agua" onclick="registrarAgua(450)">+450 ml</button>
           <button class="btn-agua" onclick="registrarAgua(1000)">+1 L</button>
+          <button class="btn-agua btn-agua-outro" onclick="abrirModalAgua('outro')">Outro valor</button>
         </div>
 
         <div class="agua-acoes">
-          <button class="agua-link" onclick="abrirModalAgua('outro')">Outro valor</button>
           <button class="agua-link" onclick="abrirModalAgua('ajuste')">Ajustar total de hoje</button>
           <button class="agua-link" onclick="abrirModalAgua('meta')">Editar meta</button>
         </div>
@@ -1759,6 +1882,17 @@
       <button class="btn-close" aria-label="Fechar" onclick="fecharConfig()">×</button>
     </div>
     <div class="opcoes-lista" id="config-lista"></div>
+  </div>
+</div>
+
+<!-- Modal: Status do sistema -->
+<div class="modal-backdrop" id="modal-backdrop-status" onclick="fecharModalSeFundo(event, 'modal-backdrop-status', fecharStatus)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-status">
+    <div class="modal-header">
+      <h2 id="modal-titulo-status">Status do sistema</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharStatus()">×</button>
+    </div>
+    <div id="status-corpo"></div>
   </div>
 </div>
 
@@ -2310,6 +2444,9 @@ async function carregarConfig() {
   lista.innerHTML = `
     ${linhaBot}
     <div class="opcao-divider"></div>
+    <button class="opcao-btn" onclick="fecharConfig(); abrirStatus();">
+      <span class="opcao-icone">📡</span>Status do sistema
+    </button>
     <button class="opcao-btn" onclick="fecharConfig(); alternarTema();">
       <span class="opcao-icone">🎨</span>Alternar tema
     </button>
@@ -2329,6 +2466,139 @@ async function religarBot() {
   } catch {
     toast('Não consegui religar o bot');
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   STATUS DO SISTEMA
+
+   Tela de diagnóstico, não de uso: responde "o servidor está de pé, os jobs
+   rodaram e o bot está vivo?". Nenhum dado de usuário entra aqui — streak,
+   meta e contagem de módulo têm seus próprios cards, e o mesmo número em dois
+   lugares é como dois números para a mesma pergunta começam a divergir.
+
+   Existe por causa de duas falhas silenciosas: o fechamento que devolve 200
+   com erro dentro do corpo, e o resumo da noite que sumiu por catorze dias sem
+   ninguém notar. Nos dois casos o dado estava no banco e não havia por onde
+   olhar.
+   ══════════════════════════════════════════════════════════════════ */
+
+function abrirStatus() {
+  document.getElementById('status-corpo').innerHTML =
+    '<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('modal-backdrop-status').classList.add('open');
+  carregarStatus();
+}
+
+function fecharStatus() {
+  document.getElementById('modal-backdrop-status').classList.remove('open');
+}
+
+/* "há 3 min", "há 2 h", "há 4 d". Um carimbo ISO não responde a pergunta que
+   se faz nesta tela, que é sempre "faz quanto tempo?". */
+function desdeAgora(iso) {
+  if (!iso) return 'nunca';
+  const seg = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (seg < 90) return 'agora há pouco';
+  if (seg < 3600) return `há ${Math.round(seg / 60)} min`;
+  if (seg < 86400) return `há ${Math.round(seg / 3600)} h`;
+  return `há ${Math.round(seg / 86400)} d`;
+}
+
+/* Prefixo `diag` de propósito: já existe uma `horaCurta` no módulo de Agenda,
+   que corta "14:00:00" em "14:00". Declarar outra com o mesmo nome não dá erro
+   nenhum — a última vence — e esta tela passou a mostrar "2026-" em vez da
+   hora, porque recebia um ISO inteiro e a outra função cortava os cinco
+   primeiros caracteres. */
+function diagHora(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function diagLinha(rotulo, valor, tom = '') {
+  return `<div class="diag-linha">
+    <span class="diag-rotulo">${rotulo}</span>
+    <span class="diag-valor ${tom}">${valor}</span>
+  </div>`;
+}
+
+async function carregarStatus() {
+  const corpo = document.getElementById('status-corpo');
+  // Medido aqui, e não no servidor: o que interessa a quem abriu a tela é o
+  // tempo que ELE espera — rede do celular, partida a frio e consulta somados.
+  // O servidor já devolve o seu próprio pedaço (`banco_ms`), e a diferença
+  // entre os dois números é o que diz onde está a lentidão.
+  const t0 = performance.now();
+  let d = null;
+  try {
+    const res = await fetch(`${API}/diagnostico`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    d = await res.json();
+  } catch {
+    corpo.innerHTML = `<div class="empty"><span class="icon">⚠️</span>
+      Não consegui falar com o servidor.<br><small>Ele pode estar iniciando — tente de novo em alguns segundos.</small></div>`;
+    return;
+  }
+  const respostaMs = Math.round(performance.now() - t0);
+
+  const f = d.fechamento;
+  const b = d.bot;
+
+  // Três estados, não dois: "rodou" e "rodou bem" são perguntas diferentes, e
+  // tratá-las como uma só é exatamente o que deixou um módulo passar um dia
+  // inteiro sem fechar, com o Scheduler registrando sucesso.
+  const fechamentoTom = !f.rodou ? 'ruim' : (f.sem_erros ? 'bom' : 'atencao');
+  const fechamentoTexto = !f.rodou
+    ? 'não rodou'
+    : (f.sem_erros ? 'em dia' : 'rodou com erro');
+
+  const pontos = f.dias.map(dia => {
+    const tom = !dia.executou ? 'ruim' : (dia.erros ? 'atencao' : 'bom');
+    const rotulo = dataCurta(dia.data);
+    const desc = !dia.executou ? 'não rodou' : (dia.erros ? `erro: ${escHtml(dia.erros)}` : 'ok');
+    return `<span class="diag-ponto ${tom}" title="${rotulo}: ${desc}"></span>`;
+  }).reverse().join('');   // do mais antigo para o mais recente, como uma linha do tempo
+
+  const silencioTexto = b.silenciado
+    ? `sim${b.modulos_silenciados.length ? ' — ' + b.modulos_silenciados.join(', ') : ''}`
+    : 'não';
+
+  corpo.innerHTML = `
+    <div class="diag-bloco">
+      <h3>Fechamento diário</h3>
+      ${diagLinha('Dia de ' + dataCurta(f.esperado), fechamentoTexto, fechamentoTom)}
+      ${f.erros ? diagLinha('Erro', escHtml(f.erros), 'atencao') : ''}
+      ${diagLinha('Última execução', `${desdeAgora(f.ultima_execucao_em)} · ${diagHora(f.ultima_execucao_em)}`)}
+      <div class="diag-linha">
+        <span class="diag-rotulo">Últimos 7 dias</span>
+        <span class="diag-pontos">${pontos}</span>
+      </div>
+    </div>
+
+    <div class="diag-bloco">
+      <h3>Bot de lembretes</h3>
+      ${diagLinha('Janela', `${b.janela_inicio.substring(0,5)}–${b.janela_fim.substring(0,5)}`)}
+      ${diagLinha('Agora', b.dentro_da_janela ? 'dentro da janela' : 'fora da janela',
+                  b.dentro_da_janela ? 'bom' : '')}
+      ${diagLinha('Última mensagem', `${desdeAgora(b.ultimo_envio_em)} · ${diagHora(b.ultimo_envio_em)}`)}
+      ${diagLinha('Alertas hoje', String(b.envios_hoje))}
+      ${diagLinha('Silenciado', silencioTexto, b.silenciado ? 'atencao' : '')}
+      ${b.adiamentos_ativos ? diagLinha('Adiamentos ativos', String(b.adiamentos_ativos)) : ''}
+      ${b.configurado ? '' : diagLinha('Conversa', 'nenhuma conversa vinculada', 'ruim')}
+    </div>
+
+    <div class="diag-bloco">
+      <h3>Servidor</h3>
+      ${diagLinha('Resposta', `${respostaMs} ms · banco ${d.servidor.banco_ms} ms`,
+                  respostaMs > 3000 ? 'atencao' : 'bom')}
+      ${diagLinha('Hora do servidor', `${diagHora(d.servidor.hora)} · ${d.servidor.fuso}`)}
+      ${d.servidor.revisao ? diagLinha('Revisão', escHtml(d.servidor.revisao)) : ''}
+    </div>
+
+    <button class="opcao-btn" onclick="abrirStatus()">
+      <span class="opcao-icone">🔄</span>Atualizar
+    </button>
+  `;
 }
 
 async function esquecerChave() {
@@ -2520,67 +2790,89 @@ function renderList(meds) {
     return;
   }
 
-  // NOVA LÓGICA DE ORDENAÇÃO
-  meds.sort((a, b) => {
-    // 1. Define pesos para os status (PENDENTE vem primeiro, TOMADO depois)
-    const pesoStatus = { 'PENDENTE': 1, 'TOMADO': 2 };
+  /* Tomado sai da lista principal e vai para um bloco recolhido no fim
+     (14/09/2026). Com dez remédios no dia, o que já foi marcado ocupava mais
+     da metade da tela sem pedir nada de ninguém, e o que falta — a única coisa
+     acionável ali — ficava embaixo. Some da vista, não do alcance: o bloco
+     abre com um toque e cada linha continua clicável para desmarcar.
 
-    // Se houver algum outro status (como NAO_TOMADO), ele recebe peso 3 (vai pro final)
-    const pesoA = pesoStatus[a.status_dia] || 3;
-    const pesoB = pesoStatus[b.status_dia] || 3;
+     NAO_TOMADO NÃO entra no bloco: num dia passado ele é justamente o que se
+     está olhando, e recolhê-lo esvaziaria a tela. */
+  const tomados = meds.filter(m => m.status_dia === 'TOMADO');
+  const emAberto = meds.filter(m => m.status_dia !== 'TOMADO');
 
-    // Se os status forem diferentes, ordena pelos pesos
-    if (pesoA !== pesoB) {
-      return pesoA - pesoB;
-    }
+  // Dentro de cada grupo, por horário — a ordem em que o dia acontece.
+  const porHorario = (a, b) => a.horario.localeCompare(b.horario);
+  emAberto.sort(porHorario);
+  tomados.sort(porHorario);
 
-    // 2. Se os status forem iguais, ordena pelo horário (do menor para o maior)
-    return a.horario.localeCompare(b.horario);
-  });
+  el.innerHTML = emAberto.map(med => linhaMedicamento(med, hojeSendoVisto)).join('')
+    + blocoTomados(tomados, hojeSendoVisto);
+}
 
-  el.innerHTML = meds.map(med => {
-    const atrasado = isAtrasado(med.horario, med.status_dia);
-    const cls = med.status_dia === 'TOMADO' ? 'tomado'
-              : med.status_dia === 'NAO_TOMADO' ? 'nao'
-              : 'pendente';
-    const horaFmt = med.horario.substring(0, 5);
+/* Bloco resumido dos já tomados. `<details>` em vez de classe + JS: recolher e
+   expandir é exatamente o que o elemento faz, de graça e com teclado. Fechado
+   por padrão — se estivesse aberto não teria resolvido nada. */
+function blocoTomados(tomados, hojeSendoVisto) {
+  if (!tomados.length) return '';
+  const nomes = tomados.map(m => `${m.horario.substring(0, 5)} ${escHtml(m.nome)}`).join(' · ');
+  return `<details class="med-tomados">
+    <summary>
+      <span class="med-tomados-titulo">✓ ${tomados.length} já ${tomados.length === 1 ? 'tomado' : 'tomados'}</span>
+      <span class="med-tomados-resumo">${nomes}</span>
+    </summary>
+    ${tomados.map(med => linhaMedicamento(med, hojeSendoVisto, true)).join('')}
+  </details>`;
+}
 
-    const acaoHtml = hojeSendoVisto
-      ? `<button
-          class="btn-status ${cls}"
-          data-id="${med.id}"
-          data-status="${med.status_dia}"
-          ${med.status_dia === 'NAO_TOMADO' ? 'disabled' : ''}
-          onclick="toggleStatus(this)"
-        >
-          <span>${statusIcon(med.status_dia)}</span>
-          <span>${statusLabel(med.status_dia)}</span>
-        </button>`
-      : `<span class="status-readonly ${cls}">
-          <span>${statusIcon(med.status_dia)}</span>
-          <span>${statusLabel(med.status_dia) === 'Marcar' ? 'Pendente' : statusLabel(med.status_dia)}</span>
-        </span>`;
+/* `compacta` encolhe a linha dentro do bloco dos tomados: o botão vira só o
+   ✓ (o rótulo repetiria o que o cabeçalho do bloco já diz) e o ⋯ sai, porque
+   editar um remédio já marcado é o caso mais raro que existe — ele continua
+   a um toque, desmarcando ou fechando o bloco. */
+function linhaMedicamento(med, hojeSendoVisto, compacta = false) {
+  const atrasado = isAtrasado(med.horario, med.status_dia);
+  const cls = med.status_dia === 'TOMADO' ? 'tomado'
+            : med.status_dia === 'NAO_TOMADO' ? 'nao'
+            : 'pendente';
+  const horaFmt = med.horario.substring(0, 5);
 
-    /* O "⋯" só aparece olhando hoje: editar ou excluir a partir de um dia
-       passado daria a impressão de mexer no histórico, que é justamente o
-       que o módulo não permite. */
-    const opcoesHtml = ehHoje(dataVisualizada)
-      ? `<button class="btn-opcoes" onclick="abrirOpcoesMedicamento('${med.id}')"
-                 aria-label="Opções de ${escHtml(med.nome)}">⋯</button>`
-      : '';
+  const acaoHtml = hojeSendoVisto
+    ? `<button
+        class="btn-status ${cls}"
+        data-id="${med.id}"
+        data-status="${med.status_dia}"
+        ${med.status_dia === 'NAO_TOMADO' ? 'disabled' : ''}
+        onclick="toggleStatus(this)"
+        ${compacta ? `title="Desmarcar ${escHtml(med.nome)}" aria-label="Desmarcar ${escHtml(med.nome)}"` : ''}
+      >
+        <span>${statusIcon(med.status_dia)}</span>
+        ${compacta ? '' : `<span>${statusLabel(med.status_dia)}</span>`}
+      </button>`
+    : `<span class="status-readonly ${cls}">
+        <span>${statusIcon(med.status_dia)}</span>
+        ${compacta ? '' : `<span>${statusLabel(med.status_dia) === 'Marcar' ? 'Pendente' : statusLabel(med.status_dia)}</span>`}
+      </span>`;
 
-    return `<div class="med-card" style="margin-bottom:10px">
-      <div class="med-info">
-        <div class="med-nome">${escHtml(med.nome)}</div>
-        <div class="med-meta">
-          <span class="med-hora">${horaFmt}</span>
-          ${atrasado ? '<span class="badge-atrasado">Atrasado</span>' : ''}
-        </div>
+  /* O "⋯" só aparece olhando hoje: editar ou excluir a partir de um dia
+     passado daria a impressão de mexer no histórico, que é justamente o
+     que o módulo não permite. Dentro do bloco dos tomados ele também sai —
+     ver o comentário de `compacta`. */
+  const opcoesHtml = ehHoje(dataVisualizada) && !compacta
+    ? `<button class="btn-opcoes" onclick="abrirOpcoesMedicamento('${med.id}')"
+               aria-label="Opções de ${escHtml(med.nome)}">⋯</button>`
+    : '';
+
+  return `<div class="med-card${compacta ? ' compacta' : ''}">
+    <div class="med-info">
+      <div class="med-nome">${escHtml(med.nome)}</div>
+      <div class="med-meta">
+        <span class="med-hora">${horaFmt}</span>
+        ${atrasado ? '<span class="badge-atrasado">Atrasado</span>' : ''}
       </div>
-      ${acaoHtml}
-      ${opcoesHtml}
-    </div>`;
-  }).join('');
+    </div>
+    ${acaoHtml}
+    ${opcoesHtml}
+  </div>`;
 }
 
 /* ── Carregar lista (do dia sendo visualizado) ── */
@@ -3023,7 +3315,7 @@ let calendarioAguaIniciado = false;
 let modoModalAgua = 'outro';
 
 /* Litro só existe como formatação de tela — no banco e na API é sempre ml
-   inteiro. 1200 → "1,2 L"; 1250 → "1,25 L"; 2000 → "2 L"; 480 → "480 ml". */
+   inteiro. 1200 → "1,2 L"; 1250 → "1,25 L"; 2000 → "2 L"; 450 → "450 ml". */
 function formatarVolume(ml) {
   if (ml >= 1000) {
     const litros = ml / 1000;
@@ -3111,7 +3403,10 @@ function renderStreakAgua() {
     : `<span>🔥</span> <strong>${streakAgua}</strong> ${streakAgua === 1 ? 'dia seguido' : 'dias seguidos'}`;
 }
 
-/* ── Registro pelos botões fixos (200 ml / 480 ml / 1 L) ──
+/* ── Registro pelos botões fixos (200 ml / 450 ml / 1 L) ──
+   Os três volumes são espelhados em app/telegram/avaliadores/agua.py
+   (VOLUMES_BOTAO): o bot monta os MESMOS botões e o plano de "faltam X ml"
+   só sugere volumes que existem aqui. Mudar um lado pede mudar o outro.
    Os botões são desabilitados durante a chamada pra um duplo toque não somar
    duas vezes; a resposta já traz o novo estado, então não há refetch. */
 async function registrarAgua(volumeMl) {
@@ -3794,6 +4089,35 @@ function atualizarHeaderTarefas() {
    A ordem dentro de cada bloco já vem pronta do backend (prazo, depois
    título); aqui só se separa atrasadas de pendentes e se recolhe o
    histórico recente. */
+/* ── Ordem de leitura da lista (decisão de 14/09/2026) ──
+   Alta → Média → Baixa → sem prioridade. "Sem prioridade" vai para o fim por
+   escolha explícita: aqui ela significa "ainda não classifiquei", e o que não
+   foi classificado não disputa espaço com o que foi.
+
+   Desempate por prazo e depois por título, os dois estáveis — sem o título,
+   duas tarefas de mesma prioridade e mesmo prazo trocariam de lugar entre um
+   render e outro, que é o tipo de movimento que faz perder o toque.
+
+   A ordenação é só visual: a tarja colorida de prioridade continua sendo o que
+   identifica cada uma, e ela não depende da posição. */
+const PESO_PRIORIDADE = { ALTA: 1, MEDIA: 2, BAIXA: 3 };
+const SEM_PRIORIDADE = 4;
+const SEM_PRAZO = '9999-12-31';  // ordena por último sem virar caso especial
+
+function compararTarefas(a, b) {
+  const peso = (PESO_PRIORIDADE[a.prioridade] || SEM_PRIORIDADE)
+             - (PESO_PRIORIDADE[b.prioridade] || SEM_PRIORIDADE);
+  if (peso) return peso;
+  const prazoA = a.prazo || SEM_PRAZO;
+  const prazoB = b.prazo || SEM_PRAZO;
+  if (prazoA !== prazoB) return prazoA < prazoB ? -1 : 1;  // ISO compara como texto
+  return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR');
+}
+
+function ordenadas(lista) {
+  return [...lista].sort(compararTarefas);   // cópia: `tarefasCache` não é reordenado
+}
+
 function renderTarefas() {
   const el = document.getElementById('tarefas-list');
 
@@ -3813,7 +4137,7 @@ function renderTarefas() {
   if (atrasadas.length) {
     html += `<div class="tarefa-grupo">
       <p class="tarefa-grupo-titulo alerta">Atrasadas</p>
-      ${atrasadas.map(x => tarefaRowHtml(x)).join('')}
+      ${ordenadas(atrasadas).map(x => tarefaRowHtml(x)).join('')}
     </div>`;
   }
   // "Em aberto" é a única seção dividida por grupo. Atrasadas, Agendadas e
@@ -3831,7 +4155,7 @@ function renderTarefas() {
 
     html += `<div class="tarefa-grupo">
       ${atrasadas.length && semGrupo.length ? '<p class="tarefa-grupo-titulo">Em aberto</p>' : ''}
-      ${semGrupo.map(x => tarefaRowHtml(x)).join('')}
+      ${ordenadas(semGrupo).map(x => tarefaRowHtml(x)).join('')}
     </div>`;
 
     // Dentro do bloco do grupo o chip nunca aparece: o cabeçalho já diz o
@@ -3841,7 +4165,7 @@ function renderTarefas() {
     html += comGrupo.map(([g, itens]) => `
       <section class="tarefa-caixa-grupo">
         <p class="tarefa-grupo-titulo">${escHtml(g)}</p>
-        ${itens.map(x => tarefaRowHtml(x, false)).join('')}
+        ${ordenadas(itens).map(x => tarefaRowHtml(x, false)).join('')}
       </section>`).join('');
   }
   if (!atrasadas.length && !pendentes.length) {
@@ -3853,7 +4177,7 @@ function renderTarefas() {
   if (agendadas.length) {
     html += `<details class="tarefa-grupo tarefa-recolhivel">
       <summary>Agendadas (${agendadas.length})</summary>
-      ${agendadas.map(x => tarefaRowHtml(x)).join('')}
+      ${ordenadas(agendadas).map(x => tarefaRowHtml(x)).join('')}
     </details>`;
   }
   if (finalizadas.length) {
@@ -3910,17 +4234,39 @@ function tarefaRowHtml(t, comChip = true) {
   else if (t.prioridade) classes.push(`prio-${t.prioridade}`);
   if (finalizada) classes.push('finalizada');
 
-  return `<div>
+  // Só quem tem subtarefa ganha o recolher, e ele fica perto do contador n/m,
+  // que é a informação que sobra quando a lista some. Sem rótulo de texto: o
+  // alvo já tem 32px e um rótulo competiria com o título da tarefa.
+  const recolher = subs.length
+    ? `<button class="btn-recolher-subs" onclick="toggleSubtarefas(this)" aria-expanded="true"
+         aria-label="Recolher subtarefas de ${escHtml(t.titulo)}" title="Recolher subtarefas">▾</button>`
+    : '';
+
+  return `<div class="tarefa-item">
     <div class="${classes.join(' ')}">
       ${marca}
       <div class="tarefa-info">
         <div class="tarefa-titulo">${escHtml(t.titulo)}</div>
         ${meta.length ? `<div class="tarefa-meta">${meta.join('')}</div>` : ''}
       </div>
+      ${recolher}
       <button class="btn-opcoes" onclick="abrirOpcoesTarefa('${t.id}')" aria-label="Opções de ${escHtml(t.titulo)}">⋯</button>
     </div>
     ${subs.length ? subtarefasHtml(t, subs) : ''}
   </div>`;
+}
+
+/* Recolher é estado de sessão, e de propósito: nada é guardado, e qualquer
+   ação que redesenhe a lista (concluir, criar, editar) traz tudo aberto de
+   novo. Guardar por tarefa significaria uma chave no localStorage por id, que
+   sobrevive à tarefa e nunca é limpa — preço alto para uma conveniência que
+   dura um toque. */
+function toggleSubtarefas(btn) {
+  const item = btn.closest('.tarefa-item');
+  const recolhido = item.classList.toggle('subs-recolhidas');
+  btn.textContent = recolhido ? '▸' : '▾';
+  btn.setAttribute('aria-expanded', recolhido ? 'false' : 'true');
+  btn.setAttribute('title', recolhido ? 'Mostrar subtarefas' : 'Recolher subtarefas');
 }
 
 function subtarefasHtml(t, subs) {
