@@ -1038,6 +1038,23 @@
   .tarefa-row.finalizada .tarefa-titulo { text-decoration: line-through; color: var(--muted); }
 
   .tarefa-info { flex: 1; min-width: 0; }
+  /* Quando a tarefa tem subtarefas, este mesmo bloco (título + meta) vira o
+     alvo de toque para recolher/expandir — é a área grande que já existia no
+     layout, em vez de depender só do botãozinho de 26×32px ao lado. O botão
+     continua existindo (mostra a seta e serve pra quem mira nele), mas deixa
+     de ser o único jeito de acertar. */
+  .tarefa-info.recolhivel {
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 4px 6px;
+    margin: -4px -6px;
+    transition: background .12s;
+  }
+  .tarefa-info.recolhivel:hover, .tarefa-info.recolhivel:focus-visible {
+    background: var(--accent-bg);
+    outline: none;
+  }
+  .tarefa-info.recolhivel:active { opacity: .75; }
   /* Título longo quebra em até DUAS linhas em vez de virar "...". No celular
      isso é a diferença entre ler a tarefa e adivinhar qual é.
 
@@ -4234,18 +4251,25 @@ function tarefaRowHtml(t, comChip = true) {
   else if (t.prioridade) classes.push(`prio-${t.prioridade}`);
   if (finalizada) classes.push('finalizada');
 
-  // Só quem tem subtarefa ganha o recolher, e ele fica perto do contador n/m,
-  // que é a informação que sobra quando a lista some. Sem rótulo de texto: o
-  // alvo já tem 32px e um rótulo competiria com o título da tarefa.
+  // Só quem tem subtarefa ganha o recolher. O botãozinho continua (mostra a
+  // seta e fica perto do contador n/m), mas o alvo de toque de verdade é o
+  // bloco inteiro de título+meta logo ao lado — bem maior, e é área que já
+  // existia no layout. O botão sozinho tinha 26×32px, pequeno demais no
+  // celular; o bloco de info é o resto da linha.
   const recolher = subs.length
     ? `<button class="btn-recolher-subs" onclick="toggleSubtarefas(this)" aria-expanded="true"
          aria-label="Recolher subtarefas de ${escHtml(t.titulo)}" title="Recolher subtarefas">▾</button>`
     : '';
+  const infoClicavel = subs.length
+    ? ` role="button" tabindex="0" class="tarefa-info recolhivel" onclick="toggleSubtarefas(this)"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSubtarefas(this);}"
+         aria-expanded="true" aria-label="Recolher subtarefas de ${escHtml(t.titulo)}"`
+    : ' class="tarefa-info"';
 
   return `<div class="tarefa-item">
     <div class="${classes.join(' ')}">
       ${marca}
-      <div class="tarefa-info">
+      <div${infoClicavel}>
         <div class="tarefa-titulo">${escHtml(t.titulo)}</div>
         ${meta.length ? `<div class="tarefa-meta">${meta.join('')}</div>` : ''}
       </div>
@@ -4260,13 +4284,24 @@ function tarefaRowHtml(t, comChip = true) {
    ação que redesenhe a lista (concluir, criar, editar) traz tudo aberto de
    novo. Guardar por tarefa significaria uma chave no localStorage por id, que
    sobrevive à tarefa e nunca é limpa — preço alto para uma conveniência que
-   dura um toque. */
-function toggleSubtarefas(btn) {
-  const item = btn.closest('.tarefa-item');
+   dura um toque.
+
+   Dois elementos chamam esta função (o botão-seta e o bloco de info inteiro),
+   por isso ela parte de `.closest('.tarefa-item')` em vez de assumir que
+   recebeu o botão: acha o item pelo clique em qualquer um dos dois, e depois
+   sincroniza o estado visual (seta, aria-expanded, title) nos dois. */
+function toggleSubtarefas(origem) {
+  const item = origem.closest('.tarefa-item');
   const recolhido = item.classList.toggle('subs-recolhidas');
-  btn.textContent = recolhido ? '▸' : '▾';
-  btn.setAttribute('aria-expanded', recolhido ? 'false' : 'true');
-  btn.setAttribute('title', recolhido ? 'Mostrar subtarefas' : 'Recolher subtarefas');
+  const rotuloAcao = recolhido ? 'Mostrar subtarefas' : 'Recolher subtarefas';
+  const seta = item.querySelector('.btn-recolher-subs');
+  if (seta) {
+    seta.textContent = recolhido ? '▸' : '▾';
+    seta.setAttribute('aria-expanded', recolhido ? 'false' : 'true');
+    seta.setAttribute('title', rotuloAcao);
+  }
+  const info = item.querySelector('.tarefa-info.recolhivel');
+  if (info) info.setAttribute('aria-expanded', recolhido ? 'false' : 'true');
 }
 
 function subtarefasHtml(t, subs) {
