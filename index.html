@@ -951,6 +951,14 @@
   }
   .tarefa-chip.cancelada { background: var(--anulado-bg); color: var(--anulado); }
   .tarefa-chip.recorrente { background: var(--accent-bg); color: var(--accent); }
+  /* Neutro de propósito: o grupo é rótulo, não estado. Cor própria por grupo
+     competiria com a tarja de prioridade e com o vermelho de atrasado, que são
+     as duas coisas que a linha realmente precisa gritar. */
+  .tarefa-chip.grupo {
+    background: var(--anulado-bg);
+    color: var(--muted);
+    font-weight: 600;
+  }
 
   /* Caixa de marcar, à ESQUERDA do título — mesma posição da subtarefa, que é
      onde o olho procura numa lista de checklist.
@@ -1869,6 +1877,17 @@
       <div class="field">
         <label for="tarefa-titulo">Título</label>
         <input id="tarefa-titulo" type="text" placeholder="Ex: Levar o carro na revisão" required>
+      </div>
+      <div class="field">
+        <label for="tarefa-grupo">Grupo</label>
+        <!-- Input com datalist, e não select: o conjunto de grupos é aberto.
+             A lista sugere os que já existem; digitar um nome novo cria o
+             grupo na hora, sem migration nem deploy. -->
+        <input id="tarefa-grupo" list="tarefa-grupos-usados" maxlength="40"
+               placeholder="Ex: Trabalho" required autocomplete="off">
+        <datalist id="tarefa-grupos-usados"></datalist>
+        <p class="field-aviso">Maiúsculas e acentos não importam: "Trabalho" e
+          "trabalho" são o mesmo grupo.</p>
       </div>
       <div class="field">
         <label for="tarefa-prazo" id="tarefa-prazo-label">Prazo (opcional)</label>
@@ -3652,6 +3671,19 @@ async function excluirConta(id) {
    ══════════════════════════════════════════════════════════════════ */
 const JANELA_FINALIZADAS_DIAS = 7;
 
+/* Não existe lista fixa de grupos: eles são o texto que está em cada tarefa,
+   já normalizado pelo backend (sem acento, caixa alta). O navegador agrupa por
+   igualdade de string e não normaliza nada.
+
+   A lista abaixo sai dos dados que já estão carregados — nenhuma chamada nova
+   à API só para descobrir quais grupos existem. A consequência, aceita: um
+   grupo usado só numa tarefa concluída há mais de 7 dias não aparece nas
+   sugestões, porque ele não veio no payload. Digitar o nome de novo resolve,
+   e cai no mesmo grupo. */
+function gruposEmUso() {
+  return [...new Set(tarefasCache.map(t => t.grupo).filter(Boolean))].sort();
+}
+
 let tarefasCache = [];
 let tarefaEditandoId = null;
 let subtarefaPaiId = null;
@@ -3742,13 +3774,27 @@ function renderTarefas() {
   if (atrasadas.length) {
     html += `<div class="tarefa-grupo">
       <p class="tarefa-grupo-titulo alerta">Atrasadas</p>
-      ${atrasadas.map(tarefaRowHtml).join('')}
+      ${atrasadas.map(x => tarefaRowHtml(x)).join('')}
     </div>`;
   }
+  // "Em aberto" é a única seção dividida por grupo. Atrasadas, Agendadas e
+  // Concluídas continuam únicas e globais de propósito: uma tarefa atrasada é
+  // urgente independente de onde veio, e repartir as quatro seções em quatro
+  // grupos daria dezesseis blocos numa tela que hoje tem quatro. O chip em
+  // cada linha resolve o "de onde é isto" nas seções globais.
   if (pendentes.length) {
+    const porGrupo = [...new Set(pendentes.map(t => t.grupo))].sort()
+      .map(g => [g, pendentes.filter(t => t.grupo === g)]);
+    // Um grupo só não vira subtítulo: seria um cabeçalho para dizer o que o
+    // chip de cada linha já diz.
+    const dividir = porGrupo.length > 1;
+
     html += `<div class="tarefa-grupo">
-      ${atrasadas.length ? '<p class="tarefa-grupo-titulo">Em aberto</p>' : ''}
-      ${pendentes.map(tarefaRowHtml).join('')}
+      ${atrasadas.length && !dividir ? '<p class="tarefa-grupo-titulo">Em aberto</p>' : ''}
+      ${porGrupo.map(([g, itens]) => `
+        ${dividir ? `<p class="tarefa-grupo-titulo">${escHtml(g)}</p>` : ''}
+        ${itens.map(x => tarefaRowHtml(x, !dividir)).join('')}
+      `).join('')}
     </div>`;
   }
   if (!atrasadas.length && !pendentes.length) {
@@ -3760,7 +3806,7 @@ function renderTarefas() {
   if (agendadas.length) {
     html += `<details class="tarefa-grupo tarefa-recolhivel">
       <summary>Agendadas (${agendadas.length})</summary>
-      ${agendadas.map(tarefaRowHtml).join('')}
+      ${agendadas.map(x => tarefaRowHtml(x)).join('')}
     </details>`;
   }
   if (finalizadas.length) {
@@ -3768,19 +3814,25 @@ function renderTarefas() {
     // de uma lista de tarefas, e uma seção fechada some da vista.
     html += `<details class="tarefa-grupo tarefa-recolhivel" open>
       <summary>Concluídas nos últimos ${JANELA_FINALIZADAS_DIAS} dias (${finalizadas.length})</summary>
-      ${finalizadas.map(tarefaRowHtml).join('')}
+      ${finalizadas.map(x => tarefaRowHtml(x)).join('')}
     </details>`;
   }
   el.innerHTML = html;
 }
 
-function tarefaRowHtml(t) {
+/* `comChip` desliga o chip do grupo nas linhas que estão sob um cabeçalho de
+   grupo — ali ele repetiria em miniatura o que o subtítulo acabou de dizer.
+   Nas seções globais (Atrasadas, Agendadas, Concluídas), que misturam grupos,
+   é ele quem responde "de onde é isto". */
+function tarefaRowHtml(t, comChip = true) {
   const finalizada = t.status !== 'PENDENTE';
   const atrasada = tarefaAtrasada(t);
   const subs = t.subtarefas || [];
   const subsPendentes = subs.filter(s => s.status === 'PENDENTE').length;
 
   const meta = [];
+  // O chip do grupo vem primeiro — ver `comChip` acima.
+  if (comChip && t.grupo) meta.push(`<span class="tarefa-chip grupo">${escHtml(t.grupo)}</span>`);
   if (t.prazo) meta.push(`<span>${atrasada ? 'Venceu' : 'Para'} ${dataCurta(t.prazo)}</span>`);
   if (t.intervalo_dias) meta.push(`<span class="tarefa-chip recorrente">🔁 a cada ${t.intervalo_dias}d</span>`);
   if (subs.length) meta.push(`<span class="tarefa-contador">${subs.length - subsPendentes}/${subs.length}</span>`);
@@ -3996,6 +4048,7 @@ function abrirModalTarefa(id = null) {
       document.getElementById('tarefa-titulo').value = t.titulo;
       document.getElementById('tarefa-prazo').value = t.prazo || '';
       document.getElementById('tarefa-prioridade').value = t.prioridade || '';
+      document.getElementById('tarefa-grupo').value = t.grupo || '';
       repetir.checked = !!t.intervalo_dias;
       document.getElementById('tarefa-intervalo').value = t.intervalo_dias || '';
       // Uma tarefa com subtarefas não pode virar recorrente (RN-18).
@@ -4006,6 +4059,10 @@ function abrirModalTarefa(id = null) {
     titulo.textContent = 'Nova tarefa';
     btn.textContent = 'Adicionar';
   }
+
+  // Sugestões montadas a cada abertura, a partir do que já está em memória.
+  document.getElementById('tarefa-grupos-usados').innerHTML =
+    gruposEmUso().map(g => `<option value="${escHtml(g)}">`).join('');
 
   alternarRepeticao();
   document.getElementById('modal-backdrop-tarefa').classList.add('open');
@@ -4023,10 +4080,12 @@ document.getElementById('tarefa-form').addEventListener('submit', async e => {
   const titulo = document.getElementById('tarefa-titulo').value.trim();
   const prazo = document.getElementById('tarefa-prazo').value || null;
   const prioridade = document.getElementById('tarefa-prioridade').value || null;
+  const grupo = document.getElementById('tarefa-grupo').value.trim();
   const repete = document.getElementById('tarefa-repetir').checked;
   const intervalo = repete ? Number(document.getElementById('tarefa-intervalo').value) : null;
 
   if (!titulo) { toast('Informe o título'); return; }
+  if (!grupo) { toast('Informe o grupo'); return; }
   if (repete && (!Number.isInteger(intervalo) || intervalo < 1 || intervalo > 365)) {
     toast('O intervalo deve ser de 1 a 365 dias'); return;
   }
@@ -4038,7 +4097,7 @@ document.getElementById('tarefa-form').addEventListener('submit', async e => {
     const res = await fetch(editando ? `${API}/tarefas/${editando}` : `${API}/tarefas`, {
       method: editando ? 'PATCH' : 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ titulo, prazo, prioridade, intervalo_dias: intervalo }),
+      body: JSON.stringify({ titulo, grupo, prazo, prioridade, intervalo_dias: intervalo }),
     });
     if (tratarNaoAutorizado(res)) return;
     if (!res.ok) {
@@ -4397,6 +4456,7 @@ document.getElementById('compromisso-form').addEventListener('submit', async e =
   const hora = document.getElementById('compromisso-hora').value || null;
 
   if (!titulo) { toast('Informe o título'); return; }
+  if (!grupo) { toast('Informe o grupo'); return; }
   if (!data) { toast('Informe a data'); return; }
 
   btn.disabled = true;
