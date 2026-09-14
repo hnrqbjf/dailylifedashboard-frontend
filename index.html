@@ -217,6 +217,11 @@
     .header-marca { width: 38px; height: 38px; padding: 9px; border-radius: 11px; }
   }
 
+  /* No celular, `.conteudo-principal` some (`display: contents`): painel-vazio
+     e modulos-grid viram itens do flex de `.shell` direto, na ordem do HTML.
+     No desktop (≥900px) ela vira a grade de duas colunas — ver ali embaixo. */
+  .conteudo-principal { display: contents; }
+
   /* ══ Grid de módulos ══
      Celular pequeno: 1 coluna (cards em linha compacta).
      Tela média (tablet em pé): 2 colunas, cards quadrados.
@@ -1527,52 +1532,44 @@
     .spinner { animation: none; }
     .btn-status, .btn-add, #toast { transition: none; }
   }
-  /* ══ Tela larga (≥900px): trilho de módulos à esquerda, conteúdo à direita ══
-     No celular a lista empilhada funciona bem, mas no desktop ela desperdiça a
-     largura e gasta altura: os azulejos ficavam espremidos no alto e o resto da
-     tela vazio. Aqui o card ABERTO usa `display: contents`, então o cabeçalho
-     dele continua na coluna do trilho e o corpo vai para a área de conteúdo —
-     sem duplicar marcação nem trocar o HTML, que segue idêntico no celular. */
-  @media (min-width: 900px) {
-    /* O trilho é permanente: a tela não muda de forma quando você abre um
-       módulo, só troca o que está na área de conteúdo. Enquanto nada está
-       aberto, quem ocupa essa área é o painel de convite — espaço reservado
-       com um propósito, e não espaço sobrando. */
-    .modulos-grid {
-      grid-template-columns: 272px minmax(0, 1fr);
-      align-content: start;
-      gap: 10px 18px;
-    }
+  /* ══ Resumo do dia — componente único em três estados ══
+     (Modulo_Dashboard.md, RN-10) "convite" e "carregado" são sub-blocos
+     alternados por `hidden`; "faixa" não é um terceiro elemento — é o mesmo
+     "carregado" comprimido por CSS quando `:has(.card.open)`, sem o JS
+     precisar saber a diferença entre painel e faixa.
 
-    .card { grid-column: 1; }
+     Ao contrário do antigo painel de convite (só ≥900px, porque só o
+     desktop tinha coluna de conteúdo sobrando), este componente vive em
+     TODA largura de tela. No celular basta a ordem do HTML (é o primeiro
+     filho de `.conteudo-principal`, que ali é `display: contents`); no
+     desktop o posicionamento explícito fica nas regras de
+     `@media (min-width: 900px)` mais abaixo. */
+  .painel-vazio {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 16px;
+    padding: 18px;
+  }
+  .painel-vazio.resumo-carregado { border-style: solid; padding: 14px 16px; }
 
-    /* Itens do trilho: linha compacta, sem disco nem altura de azulejo. */
-    .card:not(.open) .card-header { min-height: 0; padding: 12px 14px; gap: 12px; }
-    .card:not(.open) .card-icone { font-size: 1.2rem; }
-    .card:not(.open) .card-nome { font-size: .97rem; }
-    .card:not(.open) .chevron { display: none; }
-
-    /* Painel de convite: ocupa a área de conteúdo até você escolher um módulo,
-       e some no instante em que algum abre. */
-    .painel-vazio {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      grid-column: 2;
-      grid-row: 1 / span 30;
-      align-self: stretch;
-      min-height: 260px;
-      background: var(--surface);
-      border: 1px dashed var(--border);
-      border-radius: 16px;
-      padding: 30px;
-      text-align: center;
-    }
-    .painel-vazio-icone { font-size: 1.9rem; opacity: .75; }
-    .painel-vazio-titulo { margin: 0; font-weight: 700; font-size: 1.02rem; }
-    .painel-vazio-texto { margin: 0; color: var(--muted); font-size: .88rem; }
+  /* Convite: ícone, texto, botão — centralizado, mesma composição de antes.
+     `[hidden]` explícito por cima do `display: flex`: sem isto, a classe
+     vence o atributo por especificidade e o convite continuaria visível
+     junto do carregado — foi exatamente o bug visto na primeira captura de
+     tela deste componente. */
+  .resumo-convite {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    padding: 12px 6px;
+  }
+  #resumo-convite[hidden], #resumo-carregado[hidden] { display: none; }
+  .painel-vazio-icone { font-size: 1.9rem; opacity: .75; }
+  .painel-vazio-titulo { margin: 0; font-weight: 700; font-size: 1.02rem; }
+  .painel-vazio-texto { margin: 0; color: var(--muted); font-size: .88rem; }
   .btn-resumo {
     margin-top: 16px;
     border: none;
@@ -1586,6 +1583,7 @@
     padding: 11px 18px;
   }
   .btn-resumo:hover { filter: brightness(1.06); }
+  .btn-resumo:disabled { opacity: .6; cursor: default; filter: none; }
   .resumo-sempre {
     display: inline-flex;
     align-items: center;
@@ -1596,7 +1594,156 @@
     cursor: pointer;
   }
   .resumo-sempre input { width: 15px; height: 15px; accent-color: var(--accent); }
-    .modulos-grid:has(.card.open) .painel-vazio { display: none; }
+
+  /* Carregado: título discreto + botão de minimizar (só celular) em cima,
+     grade de blocos embaixo. */
+  .resumo-carregado-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .resumo-carregado-titulo { font-weight: 700; font-size: .88rem; color: var(--muted); }
+  .resumo-minimizar {
+    display: none;   /* só aparece <900px — RN-11 é recurso de celular */
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 8px;
+    opacity: .7;
+  }
+  .resumo-minimizar:hover { opacity: 1; }
+
+  .resumo-blocos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+  }
+  .resumo-bloco {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .resumo-bloco:hover { border-color: var(--accent); }
+  .resumo-bloco-icone { font-size: 1.15rem; flex-shrink: 0; }
+  .resumo-bloco-texto { min-width: 0; display: flex; flex-direction: column; }
+  .resumo-bloco-valor {
+    font-weight: 700;
+    font-size: .86rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .resumo-bloco-rotulo { font-size: .7rem; color: var(--muted); }
+  .resumo-vazio-tudo { margin: 4px 0; color: var(--muted); font-size: .86rem; }
+
+  /* Um card aberto: o convite some (não faz sentido convidar a carregar algo
+     que já está sendo lido), e o carregado vira faixa — compacto, uma linha
+     de chips roláveis, sem rótulo (só ícone + valor: o rótulo é o que mais
+     pesa visualmente e é o que menos falta quando o espaço é curto).
+     `.painel-vazio` agora é IRMÃO de `.modulos-grid` (vem antes dele no
+     HTML), não descendente — por isso o `:has()` usa o combinador `~` por
+     dentro para enxergar um card aberto lá na frente. */
+  .painel-vazio:not(.resumo-carregado):has(~ .modulos-grid .card.open) { display: none; }
+  .painel-vazio.resumo-carregado:has(~ .modulos-grid .card.open) { padding: 8px 10px; }
+  .painel-vazio:has(~ .modulos-grid .card.open) .resumo-carregado-topo { display: none; }
+  .painel-vazio:has(~ .modulos-grid .card.open) .resumo-blocos {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .painel-vazio:has(~ .modulos-grid .card.open) .resumo-bloco { flex: 0 0 auto; padding: 6px 10px; }
+  .painel-vazio:has(~ .modulos-grid .card.open) .resumo-bloco-rotulo { display: none; }
+
+  @media (max-width: 899px) {
+    .resumo-minimizar { display: inline-block; }
+
+    /* Minimizado (celular, RN-11): o corpo some, só a barra de título fica —
+       nunca dispara chamada nenhuma, é só CSS + uma preferência no aparelho.
+       Preso a este media query de propósito: a preferência é gravada por
+       aparelho (localStorage) e sobrevive a um reload, então se a MESMA
+       sessão virar desktop (janela redimensionada, tablet girado) a regra
+       precisa parar de valer junto com o botão que a desliga — senão o
+       resumo ficaria escondido sem nenhum jeito de reabrir. */
+    .painel-vazio.resumo-minimizado .resumo-blocos { display: none; }
+    .painel-vazio.resumo-minimizado .resumo-carregado-topo { margin-bottom: 0; }
+  }
+
+  /* ══ Tela larga (≥900px): trilho de módulos à esquerda, conteúdo à direita ══
+     No celular a lista empilhada funciona bem, mas no desktop ela desperdiça a
+     largura e gasta altura: os azulejos ficavam espremidos no alto e o resto da
+     tela vazio. Aqui o card ABERTO usa `display: contents`, então o cabeçalho
+     dele continua na coluna do trilho e o corpo vai para a área de conteúdo —
+     sem duplicar marcação nem trocar o HTML, que segue idêntico no celular.
+
+     A grade de duas colunas é de `.conteudo-principal`, não de
+     `.modulos-grid`: painel-vazio e os cards precisam disputar as MESMAS
+     colunas/linhas (a faixa do resumo fica em cima do trilho inteiro, o
+     convite fica ao lado dele), então `.modulos-grid` também vira
+     `display: contents` aqui — o mesmo truque que `.card.open` já usa uma
+     linha abaixo, só que um nível acima. */
+  @media (min-width: 900px) {
+    .conteudo-principal {
+      display: grid;
+      grid-template-columns: 272px minmax(0, 1fr);
+      align-content: start;
+      gap: 10px 18px;
+    }
+    .modulos-grid { display: contents; }
+
+    .card { grid-column: 1; }
+
+    /* Itens do trilho: linha compacta, sem disco nem altura de azulejo. */
+    .card:not(.open) .card-header { min-height: 0; padding: 12px 14px; gap: 12px; }
+    .card:not(.open) .card-icone { font-size: 1.2rem; }
+    .card:not(.open) .card-nome { font-size: .97rem; }
+    .card:not(.open) .chevron { display: none; }
+
+    /* Convite (estado 1) em tela larga: ocupa a área de conteúdo à direita
+       do trilho, como sempre ocupou — só o estado carregado/faixa (regras na
+       folha base, acima) é que passou a usar a largura inteira. Selecionado
+       por `:not(.resumo-carregado)` para não competir com a regra base
+       quando o resumo já foi carregado. */
+    .painel-vazio:not(.resumo-carregado) {
+      display: flex;
+      align-items: center;
+      grid-column: 2;
+      grid-row: 1 / span 30;
+      align-self: stretch;
+      min-height: 260px;
+      padding: 30px;
+    }
+    .painel-vazio:not(.resumo-carregado) .resumo-convite { width: 100%; }
+
+    /* Carregado/faixa (estados 2 e 3): ao contrário do convite, usa a
+       largura inteira (`1 / -1`) em cima do trilho — por isso precisa de
+       `grid-row: 1` EXPLÍCITO. Sem isso, `grid-auto-flow: row dense` tenta
+       encaixar um item de largura total numa linha onde a coluna 2 já está
+       ocupada pelo corpo do card aberto (`grid-row: 1 / span 30` logo
+       abaixo) e só acha vaga lá no fim da grade — foi o bug da faixa
+       aparecendo embaixo da página em vez do topo. Com a linha fixa aqui, o
+       corpo do card aberto é quem cede espaço (regra seguinte). */
+    .painel-vazio.resumo-carregado { grid-column: 1 / -1; grid-row: 1; }
+
+    /* Só precisa ceder quando o resumo carregado está de fato ocupando a
+       linha 1 (senão, sem resumo carregado, o corpo do card continua
+       alinhado com o topo do trilho, como sempre foi). */
+    .painel-vazio.resumo-carregado ~ .modulos-grid .card.open > .card-body {
+      grid-row: 2 / span 30;
+    }
 
     .card.open {
       display: contents;  /* o cabeçalho e o corpo viram itens da grade */
@@ -1628,10 +1775,6 @@
        e devolve a tela à grade de azulejos. */
   }
 
-  /* Abaixo de 900px não existe coluna de conteúdo, então o painel de convite
-     também não existe. (Escrito como media query, e não como regra solta, para
-     não vencer por ordem o `display: flex` do trilho.) */
-  @media (max-width: 899px) { .painel-vazio { display: none; } }
 
   .header-acoes { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
@@ -1679,6 +1822,49 @@
               aria-label="Configurações">⚙️</button>
     </div>
   </header>
+
+  <!-- `.conteudo-principal` só existe para dar a painel-vazio e modulos-grid
+       uma grade em comum no desktop (≥900px): ambos precisam competir pelas
+       mesmas duas colunas (trilho/conteúdo), então nenhum dos dois pode ter
+       sua própria grade isolada. No celular ela é `display: contents` — se
+       dissolve e os dois viram itens do flex de `.shell` diretamente, na
+       ordem do HTML (por isso painel-vazio vem primeiro: sem precisar de
+       `order`). -->
+  <div class="conteudo-principal">
+
+  <!-- Resumo do dia — mesmo componente em três estados (Modulo_Dashboard.md
+       RN-10): convite (nada carregado), carregado (um bloco por módulo) e
+       faixa (compacto, quando um card abre — regido por CSS via
+       `:has(~ .modulos-grid .card.open)`, nenhum JS precisa saber disso).
+       Fica FORA de `.modulos-grid` de propósito: dentro do grid, o
+       `grid-auto-flow: row dense` competia com os `.card.open` explicitamente
+       posicionados (`display:contents` + `grid-row:1/span 30`) e jogava a
+       faixa pro fim da página em vez do topo. Como irmão que vem antes do
+       grid (dentro de `.conteudo-principal`), disputa a mesma grade sem essa
+       disputa de posicionamento automático: sua linha/coluna é sempre
+       explícita, nunca calculada por `dense`. -->
+  <div class="painel-vazio" id="painel-vazio">
+    <div class="resumo-convite" id="resumo-convite">
+      <span class="painel-vazio-icone">📊</span>
+      <p class="painel-vazio-titulo">Resumo do dia</p>
+      <p class="painel-vazio-texto">Veja tudo de uma vez, sem abrir cada módulo.</p>
+      <button class="btn-resumo" type="button" onclick="carregarResumo()">📊 Carregar resumo</button>
+      <label class="resumo-sempre">
+        <input type="checkbox" id="resumo-sempre" onchange="salvarResumoSempre(this.checked)">
+        Carregar sempre que eu abrir o app
+      </label>
+    </div>
+
+    <div class="resumo-carregado" id="resumo-carregado" hidden>
+      <div class="resumo-carregado-topo">
+        <span class="resumo-carregado-titulo">Resumo do dia</span>
+        <button class="resumo-minimizar" id="resumo-minimizar-btn" type="button"
+                onclick="toggleMinimizarResumo()" aria-expanded="true"
+                aria-label="Minimizar resumo" title="Minimizar">▴</button>
+      </div>
+      <div class="resumo-blocos" id="resumo-blocos"></div>
+    </div>
+  </div>
 
   <div class="modulos-grid">
 
@@ -1869,20 +2055,9 @@
     </div>
   </div>
 
-  <!-- Painel da área de conteúdo enquanto nenhum módulo está aberto. Só
-       aparece em tela larga: no celular não existe coluna de conteúdo. -->
-  <div class="painel-vazio" id="painel-vazio" aria-hidden="true">
-    <span class="painel-vazio-icone">📊</span>
-    <p class="painel-vazio-titulo">Resumo do dia</p>
-    <p class="painel-vazio-texto">Veja tudo de uma vez, sem abrir cada módulo.</p>
-    <button class="btn-resumo" type="button" onclick="carregarResumo()">📊 Carregar resumo</button>
-    <label class="resumo-sempre">
-      <input type="checkbox" id="resumo-sempre" onchange="salvarResumoSempre(this.checked)">
-      Carregar sempre que eu abrir o app
-    </label>
-  </div>
-
   </div><!-- /.modulos-grid -->
+
+  </div><!-- /.conteudo-principal -->
 
 </div>
 
@@ -2407,27 +2582,180 @@ function minimizarTudo() {
    CONFIGURAÇÕES (⚙️ no cabeçalho)
    ══════════════════════════════════════════════════════════════════ */
 
-/* ── Resumo do dia (dashboard) ──
-   A tela já existe; o dashboard ainda não. O botão e a caixa estão aqui de
-   propósito, para o lugar dele ficar reservado — mas responder nada a um
-   clique seria pior que não ter botão, então cada um dá o retorno que pode:
-   o botão avisa que é em breve, e a preferência é gravada de verdade, para
-   já valer no dia em que o resumo existir. */
+/* ── Resumo do dia (Dashboard) ──
+   Modulo_Dashboard.md tem o SDD completo. Aqui: carregar sob demanda
+   (RN-01/02), renderizar os seis blocos (RN-04 a RN-07), reagir a clique
+   (RN-08), recarregar a cada escrita em qualquer módulo (RN-09) e minimizar
+   no celular (RN-11). Os estados "painel" e "faixa" (RN-10) não têm função
+   própria — são a mesma marcação reagindo a `:has(.card.open)` só em CSS. */
 const RESUMO_SEMPRE_STORAGE = 'dld_resumo_sempre';
+const RESUMO_MINIMIZADO_STORAGE = 'dld_resumo_minimizado';
 
-function carregarResumo() {
-  toast('Resumo do dia: em breve 🙂');
+let resumoCarregado = false;
+let resumoCarregando = false;
+
+async function carregarResumo() {
+  if (resumoCarregando || resumoCarregado) return;
+  resumoCarregando = true;
+  const btn = document.querySelector('#resumo-convite .btn-resumo');
+  if (btn) { btn.disabled = true; btn.textContent = 'Carregando…'; }
+
+  const dados = await buscarResumo();
+
+  if (btn) { btn.disabled = false; btn.textContent = '📊 Carregar resumo'; }
+  resumoCarregando = false;
+  if (dados) aplicarResumo(dados);
+}
+
+/* Busca crua, sem mexer na tela — reaproveitada tanto pelo carregamento
+   inicial (RN-01/02) quanto pelo refresh depois de uma escrita (RN-09), que
+   não deve reexibir o botão nem o estado de "carregando" do painel. */
+async function buscarResumo() {
+  try {
+    const res = await fetch(`${API}/resumo`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return null;
+    if (!res.ok) throw new Error();
+    return await res.json();
+  } catch {
+    toast('Não foi possível carregar o resumo agora.');
+    return null;
+  }
+}
+
+function aplicarResumo(dados) {
+  resumoCarregado = true;
+  document.getElementById('resumo-convite').hidden = true;
+  document.getElementById('resumo-carregado').hidden = false;
+  document.getElementById('painel-vazio').classList.add('resumo-carregado');
+  renderResumoBlocos(dados);
+}
+
+/* RN-09: qualquer escrita, em qualquer módulo, refaz esta chamada em segundo
+   plano — SE o resumo já estiver na tela. Sem `await` no chamador de
+   propósito: a escrita que disparou isto já deu seu próprio retorno (toast,
+   re-render da lista); o resumo se atualiza por trás, sem atrasar nada. */
+async function notificarEscrita() {
+  if (!resumoCarregado) return;
+  const dados = await buscarResumo();
+  if (dados) renderResumoBlocos(dados);
+}
+
+/* RN-04/05/06/07: cada bloco é o MESMO número que o card do módulo já
+   mostra — a única exceção de forma é Agenda, que aparece como texto (o
+   próximo compromisso), nunca como contagem isolada (Modulo_Dashboard.md,
+   RN-07 — respeita a decisão de Agenda não ter badge nenhum). */
+function blocosDeResumo(r) {
+  const blocos = [];
+
+  if (r.medicamentos) {
+    blocos.push({
+      modulo: 'medicamentos', icone: '💊', rotulo: 'medicamentos',
+      valor: `${r.medicamentos.tomados}/${r.medicamentos.total}`,
+    });
+  }
+  if (r.habitos) {
+    blocos.push({
+      modulo: 'habitos', icone: '🧩', rotulo: 'hábitos',
+      valor: `${r.habitos.feitos}/${r.habitos.total}`,
+    });
+  }
+  if (r.agua) {
+    const pct = r.agua.meta_ml > 0 ? Math.round((100 * r.agua.total_ml) / r.agua.meta_ml) : 0;
+    blocos.push({ modulo: 'agua', icone: '💧', rotulo: 'água', valor: `${pct}%` });
+  }
+  if (r.contas) {
+    blocos.push({
+      modulo: 'contas', icone: '🧾', rotulo: 'contas',
+      valor: `${r.contas.vencidas} vencida${r.contas.vencidas > 1 ? 's' : ''}`,
+    });
+  }
+  if (r.tarefas) {
+    blocos.push({
+      modulo: 'tasks', icone: '✅', rotulo: 'tarefas',
+      valor: `${r.tarefas.pendentes} pendente${r.tarefas.pendentes > 1 ? 's' : ''}`,
+    });
+  }
+  if (r.agenda && r.agenda.hoje_total > 0) {
+    const hora = r.agenda.proximo_hora ? ` ${r.agenda.proximo_hora.slice(0, 5)}` : '';
+    const mais = r.agenda.hoje_total > 1 ? ` +${r.agenda.hoje_total - 1}` : '';
+    blocos.push({
+      modulo: 'agenda', icone: '📅', rotulo: 'agenda',
+      valor: `${r.agenda.proximo_titulo}${hora}${mais}`,
+    });
+  }
+
+  return blocos;
+}
+
+function renderResumoBlocos(dados) {
+  const el = document.getElementById('resumo-blocos');
+  const blocos = blocosDeResumo(dados);
+
+  el.innerHTML = blocos.length
+    ? blocos.map(b => `
+        <button type="button" class="resumo-bloco" onclick="toggleCard('${b.modulo}')">
+          <span class="resumo-bloco-icone">${b.icone}</span>
+          <span class="resumo-bloco-texto">
+            <span class="resumo-bloco-valor">${escHtml(b.valor)}</span>
+            <span class="resumo-bloco-rotulo">${b.rotulo}</span>
+          </span>
+        </button>`).join('')
+    : '<p class="resumo-vazio-tudo">Tudo em dia — nada pedindo atenção agora ✓</p>';
 }
 
 function salvarResumoSempre(marcado) {
   try { localStorage.setItem(RESUMO_SEMPRE_STORAGE, marcado ? '1' : '0'); } catch {}
-  toast(marcado ? 'Vou carregar o resumo ao abrir — quando ele existir' : 'Ok, não carrego sozinho');
+  toast(marcado ? 'Vou carregar o resumo ao abrir o app' : 'Ok, não carrego sozinho');
+}
+
+/* RN-11: minimizar é celular-only (o botão só existe visualmente <900px,
+   ver CSS), mas a função em si não precisa checar largura — o CSS já cuida
+   de o botão nem aparecer em tela larga. Nunca dispara rede. */
+function toggleMinimizarResumo() {
+  const painel = document.getElementById('painel-vazio');
+  const minimizado = painel.classList.toggle('resumo-minimizado');
+  const btn = document.getElementById('resumo-minimizar-btn');
+  if (btn) {
+    btn.textContent = minimizado ? '▾' : '▴';
+    btn.setAttribute('aria-expanded', String(!minimizado));
+    btn.setAttribute('title', minimizado ? 'Expandir' : 'Minimizar');
+    btn.setAttribute('aria-label', minimizado ? 'Expandir resumo' : 'Minimizar resumo');
+  }
+  try { localStorage.setItem(RESUMO_MINIMIZADO_STORAGE, minimizado ? '1' : '0'); } catch {}
 }
 
 (function restaurarResumoSempre() {
   try {
     const el = document.getElementById('resumo-sempre');
     if (el) el.checked = localStorage.getItem(RESUMO_SEMPRE_STORAGE) === '1';
+  } catch {}
+})();
+
+(function restaurarResumoMinimizado() {
+  try {
+    if (localStorage.getItem(RESUMO_MINIMIZADO_STORAGE) === '1') {
+      document.getElementById('painel-vazio').classList.add('resumo-minimizado');
+      // O botão sincroniza sozinho quando o resumo carregar (aplicarResumo
+      // chama renderResumoBlocos, mas o rótulo do botão vive fora dela) —
+      // ajusta aqui mesmo, já que o markup já existe no HTML desde o início.
+      const btn = document.getElementById('resumo-minimizar-btn');
+      if (btn) {
+        btn.textContent = '▾';
+        btn.setAttribute('aria-expanded', 'false');
+        btn.setAttribute('title', 'Expandir');
+        btn.setAttribute('aria-label', 'Expandir resumo');
+      }
+    }
+  } catch {}
+})();
+
+/* RN-02: "carregar sempre" é a revogação PARCIAL e nomeada da regra de
+   nenhuma chamada na abertura do app — só este módulo, só quando a
+   preferência está ligada. Roda depois dos dois restauradores acima, que já
+   deixaram a caixa e o botão de minimizar no estado certo. */
+(function autoCarregarResumoSeSempre() {
+  try {
+    if (localStorage.getItem(RESUMO_SEMPRE_STORAGE) === '1') carregarResumo();
   } catch {}
 })();
 
@@ -2927,6 +3255,7 @@ async function toggleStatus(btn) {
     if (!res.ok) throw new Error();
     toast(next === 'TOMADO' ? 'Marcado como tomado ✓' : 'Desmarcado');
     await loadMeds();
+    notificarEscrita();
   } catch {
     toast('Erro ao atualizar status');
     btn.disabled = false;
@@ -3114,6 +3443,7 @@ async function marcarHabito(id, statusAlvo) {
     if (idx >= 0) habitosCache[idx] = atualizado;
     renderHabitos();
     atualizarHeaderHabitos();
+    notificarEscrita();
   } catch {
     toast('Erro ao atualizar hábito');
   }
@@ -3443,6 +3773,7 @@ async function registrarAgua(volumeMl) {
     aguaHoje = await res.json();
     renderAgua();
     toast(!batidaAntes && aguaHoje.atingiu_meta ? 'Meta de hoje batida 🎉' : `+${formatarVolume(volumeMl)}`);
+    notificarEscrita();
   } catch {
     toast('Erro ao registrar consumo');
   } finally {
@@ -3540,6 +3871,7 @@ document.getElementById('agua-form').addEventListener('submit', async e => {
     renderAgua();
     toast(sucesso);
     fecharModalAgua();
+    notificarEscrita();
   } catch {
     toast('Erro ao salvar');
   } finally {
@@ -3857,6 +4189,7 @@ document.getElementById('pagamento-form').addEventListener('submit', async e => 
     atualizarHeaderContas();
     toast(atualizada.status === 'PAGO_ATRASADO' ? 'Pago com atraso ✓' : 'Pagamento registrado ✓');
     fecharModalPagamento();
+    notificarEscrita();
   } catch {
     toast('Erro ao registrar pagamento');
   } finally {
@@ -3887,6 +4220,7 @@ async function desfazerPagamento(id) {
     renderContas();
     atualizarHeaderContas();
     toast('Pagamento desfeito');
+    notificarEscrita();
   } catch {
     toast('Erro ao desfazer pagamento');
   }
@@ -4354,6 +4688,7 @@ async function mudarStatusTarefa(id, status, mensagem) {
     // linha nova, e reabrir APAGA uma — em nenhum dos dois casos a resposta
     // sozinha diz como a lista ficou.
     await carregarTarefas();
+    notificarEscrita();
   } catch {
     toast('Erro ao atualizar a tarefa');
   }
@@ -4799,6 +5134,7 @@ async function mudarStatusCompromisso(id, status, mensagem) {
     }
     toast(mensagem);
     await carregarAgenda();
+    notificarEscrita();
   } catch {
     toast('Erro ao atualizar o compromisso');
   }
@@ -4824,6 +5160,7 @@ async function excluirCompromisso(id) {
     if (!res.ok && res.status !== 204) throw new Error();
     toast('Excluído');
     await carregarAgenda();
+    notificarEscrita();
   } catch {
     toast('Erro ao excluir');
   }
@@ -4909,6 +5246,7 @@ document.getElementById('compromisso-form').addEventListener('submit', async e =
     toast(editando ? 'Compromisso atualizado ✓' : `${titulo} adicionado ✓`);
     fecharModalCompromisso();
     await carregarAgenda();
+    notificarEscrita();
   } catch {
     toast('Erro ao salvar o compromisso');
   } finally {
