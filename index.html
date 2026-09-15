@@ -1751,15 +1751,26 @@
     }
     .painel-vazio:not(.resumo-carregado) .resumo-convite { width: 100%; }
 
-    /* Carregado/faixa (estados 2 e 3): ao contrário do convite, usa a
-       largura inteira (`1 / -1`) em cima do trilho — por isso precisa de
-       `grid-row: 1` EXPLÍCITO. Sem isso, `grid-auto-flow: row dense` tenta
-       encaixar um item de largura total numa linha onde a coluna 2 já está
-       ocupada pelo corpo do card aberto (`grid-row: 1 / span 30` logo
-       abaixo) e só acha vaga lá no fim da grade — foi o bug da faixa
-       aparecendo embaixo da página em vez do topo. Com a linha fixa aqui, o
-       corpo do card aberto é quem cede espaço (regra seguinte). */
-    .painel-vazio.resumo-carregado { grid-column: 1 / -1; grid-row: 1; }
+    /* Carregado, SEM nenhum card aberto (estado 2): ocupa a área de conteúdo
+       à direita do trilho, igual o convite ocupava antes de carregar — é o
+       "card central" do dashboard. Sem esta regra, ao carregar o resumo ele
+       pulava direto para a faixa (regra seguinte) e a área de conteúdo
+       ficava vazia até abrir algum módulo — o bug que faltava fechar aqui. */
+    .painel-vazio.resumo-carregado:not(:has(~ .modulos-grid .card.open)) {
+      grid-column: 2;
+      grid-row: 1 / span 30;
+      align-self: start;
+    }
+
+    /* Carregado, COM um card aberto (estado 3, faixa): usa a largura inteira
+       (`1 / -1`) em cima do trilho — por isso precisa de `grid-row: 1`
+       EXPLÍCITO. Sem isso, `grid-auto-flow: row dense` tenta encaixar um item
+       de largura total numa linha onde a coluna 2 já está ocupada pelo corpo
+       do card aberto (`grid-row: 1 / span 30` logo abaixo) e só acha vaga lá
+       no fim da grade — foi o bug da faixa aparecendo embaixo da página em
+       vez do topo. Com a linha fixa aqui, o corpo do card aberto é quem cede
+       espaço (regra seguinte). */
+    .painel-vazio.resumo-carregado:has(~ .modulos-grid .card.open) { grid-column: 1 / -1; grid-row: 1; }
 
     /* Só precisa ceder quando o resumo carregado está de fato ocupando a
        linha 1 (senão, sem resumo carregado, o corpo do card continua

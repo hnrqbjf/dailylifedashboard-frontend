@@ -11,11 +11,14 @@
 // v10 (15/09/2026): checkmark nos hábitos, cores das badges pendente/anulado,
 // "sem valor definido" some quando a conta vale zero, streak da água no canto
 // (igual hábitos), e um verde no bloco de remédios já tomados.
+// v11 (15/09/2026): dashboard desktop — resumo carregado sem card aberto
+// ocupava a largura toda e deixava a área de conteúdo vazia; agora ocupa só
+// a coluna de conteúdo (como o convite fazia) até algum módulo abrir.
 // v8 (14/09/2026): água 480→450 e "Outro valor" como botão, tarefas ordenadas
 // por prioridade com subtarefas recolhíveis, remédios tomados em bloco
 // resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
 // versões chegou a ir para produção separada.
-const CACHE_NAME = 'dld-shell-v10';
+const CACHE_NAME = 'dld-shell-v11';
 // v6: módulo de Agenda implementado (o card deixa de ser "em breve").
 // v5: módulo de Tasks implementado.
 //
