@@ -2535,7 +2535,7 @@ document.getElementById('login-form').addEventListener('submit', async e => {
     document.getElementById('login-form').reset();
     document.getElementById('tela-login').classList.remove('open');
   } catch {
-    erro.textContent = 'Não consegui falar com o servidor. Tente de novo.';
+    erro.textContent = 'Não consegui falar com o servidor. Tente de novo!';
     erro.style.display = 'block';
   } finally {
     btn.disabled = false;
