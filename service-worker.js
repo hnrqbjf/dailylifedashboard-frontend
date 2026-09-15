@@ -11,7 +11,7 @@
 // por prioridade com subtarefas recolhíveis, remédios tomados em bloco
 // resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
 // versões chegou a ir para produção separada.
-const CACHE_NAME = 'dld-shell-v8';
+const CACHE_NAME = 'dld-shell-v9';
 // v6: módulo de Agenda implementado (o card deixa de ser "em breve").
 // v5: módulo de Tasks implementado.
 //

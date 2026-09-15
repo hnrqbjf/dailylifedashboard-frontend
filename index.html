@@ -1471,6 +1471,18 @@
     .modal-backdrop, .modal-sheet { transition: none; }
   }
 
+  /* ── Tela de login (context/Modulo_Login.md, F1) ── */
+  .tela-login { z-index: 200; }  /* acima de qualquer outro modal */
+  .tela-login-caixa {
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+  }
+  .tela-login-caixa .header-marca { margin: 0 auto 14px; }
+  .tela-login-titulo { margin: 0 0 20px; font-size: 1.3rem; }
+  .tela-login-caixa .field { text-align: left; }
+  .field-aviso.erro { color: var(--nao); }
+
   /* ── Botão global: minimizar todos os cards ── */
   .btn-minimizar-tudo {
     position: fixed;
@@ -1804,6 +1816,46 @@
 </style>
 </head>
 <body>
+
+<!-- Tela de login (context/Modulo_Login.md, F1) — cobre a tela inteira,
+     sem botão de fechar nem clique-fora-fecha (ao contrário dos outros
+     `modal-backdrop`): sem sessão válida, não existe "fechar" a tela de
+     login. Reaproveita a MESMA classe `.modal-backdrop`/`.modal-sheet` dos
+     outros modais (visual idêntico, já responsivo), só com `z-index` maior
+     e a classe `.open` já presente por padrão no HTML — assim, se o token
+     salvo já não existir, a tela aparece sem esperar o <script> do fim da
+     página rodar. O script logo abaixo tira o `.open` cedo, antes do resto
+     do corpo terminar de carregar, quando já existe um token salvo. -->
+<div class="modal-backdrop tela-login open" id="tela-login">
+  <div class="modal-sheet tela-login-caixa" role="dialog" aria-modal="true" aria-labelledby="tela-login-titulo">
+    <div class="header-marca" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <h1 id="tela-login-titulo" class="tela-login-titulo"><span class="marca-dld">DLD</span></h1>
+    <form id="login-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="login-usuario">Usuário</label>
+        <input id="login-usuario" name="usuario" type="text" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="login-senha">Senha</label>
+        <input id="login-senha" name="senha" type="password" autocomplete="current-password" required>
+      </div>
+      <p class="field-aviso erro" id="login-erro" style="display:none"></p>
+      <button class="btn-add" type="submit" id="login-form-submit">Entrar</button>
+    </form>
+  </div>
+</div>
+<script>
+  // Evita o flash da tela de login por cima do app quando já existe uma
+  // sessão salva: decide ANTES do resto do corpo terminar de carregar, só
+  // olhando se existe um token guardado — validade de verdade só o servidor
+  // confirma, na primeira chamada (RN-03/RN-08 de Modulo_Login.md).
+  try {
+    if (localStorage.getItem('dld_sessao_token')) {
+      document.getElementById('tela-login').classList.remove('open');
+    }
+  } catch {}
+</script>
+
 <div class="shell">
 
   <header class="header">
@@ -2074,6 +2126,33 @@
       <button class="btn-close" aria-label="Fechar" onclick="fecharConfig()">×</button>
     </div>
     <div class="opcoes-lista" id="config-lista"></div>
+  </div>
+</div>
+
+<!-- Modal: Trocar senha (context/Modulo_Login.md, F3) -->
+<div class="modal-backdrop" id="modal-backdrop-senha" onclick="fecharModalSeFundo(event, 'modal-backdrop-senha', fecharModalSenha)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-senha">
+    <div class="modal-header">
+      <h2 id="modal-titulo-senha">Trocar senha</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModalSenha()">×</button>
+    </div>
+    <form id="senha-form" class="form-row" autocomplete="off">
+      <div class="field">
+        <label for="senha-atual">Senha atual</label>
+        <input id="senha-atual" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="senha-nova">Nova senha</label>
+        <input id="senha-nova" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <div class="field">
+        <label for="senha-nova-confirmar">Confirmar nova senha</label>
+        <input id="senha-nova-confirmar" type="password" autocomplete="new-password" minlength="8" required>
+      </div>
+      <p class="field-aviso">Ao trocar, os outros aparelhos logados vão precisar entrar de novo.</p>
+      <p class="field-aviso erro" id="senha-form-erro" style="display:none"></p>
+      <button class="btn-add" type="submit" id="senha-form-submit">Trocar senha</button>
+    </form>
   </div>
 </div>
 
@@ -2372,38 +2451,96 @@
 // (ex: 'https://dld-app-xxxxxxx-uw.a.run.app').
 const API = 'https://dld-app-352695518853.us-west1.run.app';
 
-/* ── Chave de API: pedida uma vez, guardada só neste navegador ──
-   Nunca fica escrita em nenhum arquivo do repositório — só existe
-   dentro do localStorage do aparelho de quem está usando o app. */
-const API_KEY_STORAGE = 'dld_api_key';
+/* ── Sessão de login (context/Modulo_Login.md) ──
+   Substitui a antiga chave de API estática: o token nasce de POST
+   /auth/login (tela de login, mais abaixo) e vale por 30 dias (RN-05 do
+   módulo) — nunca é pedido por um prompt() bloqueante como antes. Guardado
+   só neste navegador, nunca em nenhum arquivo do repositório. */
+const SESSAO_TOKEN_STORAGE = 'dld_sessao_token';
 
-function getApiKey() {
-  let chave = localStorage.getItem(API_KEY_STORAGE);
-  while (!chave) {
-    chave = prompt('Cole sua chave de acesso ao app:');
-    if (chave) {
-      chave = chave.trim();
-      localStorage.setItem(API_KEY_STORAGE, chave);
-    }
-  }
-  return chave;
+function obterToken() {
+  try { return localStorage.getItem(SESSAO_TOKEN_STORAGE); } catch { return null; }
+}
+
+function salvarToken(token) {
+  try { localStorage.setItem(SESSAO_TOKEN_STORAGE, token); } catch {}
+}
+
+function limparToken() {
+  try { localStorage.removeItem(SESSAO_TOKEN_STORAGE); } catch {}
 }
 
 function authHeaders(extra = {}) {
-  return { 'Authorization': `Bearer ${getApiKey()}`, ...extra };
+  const token = obterToken();
+  return token ? { 'Authorization': `Bearer ${token}`, ...extra } : { ...extra };
 }
 
-/* Se o servidor disser que a chave está errada (401), esquece a chave salva
-   e pede de novo na próxima ação — evita ficar preso com uma chave inválida
-   sem saber por quê. */
+/* Mostra a tela de login por cima de tudo. `mensagem`, quando informada,
+   aparece como aviso dentro dela — usado por tratarNaoAutorizado() para
+   explicar por que a tela voltou (sessão expirou/foi encerrada), diferente
+   da primeira vez, em que a tela já abre sem aviso nenhum. */
+function mostrarTelaLogin(mensagem) {
+  const erro = document.getElementById('login-erro');
+  if (mensagem) {
+    erro.textContent = mensagem;
+    erro.style.display = 'block';
+  } else {
+    erro.style.display = 'none';
+  }
+  document.getElementById('tela-login').classList.add('open');
+}
+
+/* Se o servidor disser que a sessão é inválida ou expirou (401), limpa o
+   token salvo e mostra a tela de login diretamente — sem precisar de reload
+   manual como no esquema antigo da chave de API (RN-08 do módulo). */
 function tratarNaoAutorizado(res) {
   if (res.status === 401) {
-    localStorage.removeItem(API_KEY_STORAGE);
-    toast('Chave de acesso inválida. Recarregue a página para tentar de novo.');
+    limparToken();
+    mostrarTelaLogin('Sua sessão expirou. Entre novamente.');
     return true;
   }
   return false;
 }
+
+document.getElementById('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const usuario = document.getElementById('login-usuario').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const erro = document.getElementById('login-erro');
+  const btn = document.getElementById('login-form-submit');
+  erro.style.display = 'none';
+  if (!usuario || !senha) return;
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, senha }),
+    });
+
+    if (res.status === 429) {
+      erro.textContent = 'Muitas tentativas. Aguarde alguns minutos e tente de novo.';
+      erro.style.display = 'block';
+      return;
+    }
+    if (!res.ok) {
+      erro.textContent = 'Usuário ou senha inválidos.';
+      erro.style.display = 'block';
+      return;
+    }
+
+    const dados = await res.json();
+    salvarToken(dados.token);
+    document.getElementById('login-form').reset();
+    document.getElementById('tela-login').classList.remove('open');
+  } catch {
+    erro.textContent = 'Não consegui falar com o servidor. Tente de novo.';
+    erro.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 /* ── Data real de hoje (fixa, não muda com a navegação) ── */
 const hojeReal = new Date();
@@ -2795,8 +2932,12 @@ async function carregarConfig() {
     <button class="opcao-btn" onclick="fecharConfig(); alternarTema();">
       <span class="opcao-icone">🎨</span>Alternar tema
     </button>
-    <button class="opcao-btn perigo" onclick="esquecerChave()">
-      <span class="opcao-icone">🔑</span>Esquecer a chave de API neste aparelho
+    <div class="opcao-divider"></div>
+    <button class="opcao-btn" onclick="fecharConfig(); abrirModalSenha();">
+      <span class="opcao-icone">🔒</span>Trocar senha
+    </button>
+    <button class="opcao-btn perigo" onclick="sair()">
+      <span class="opcao-icone">🚪</span>Sair
     </button>
   `;
 }
@@ -2946,16 +3087,82 @@ async function carregarStatus() {
   `;
 }
 
-async function esquecerChave() {
-  const ok = await confirmar({
-    titulo: 'Esquecer a chave',
-    texto: 'A chave de API sai deste aparelho e será pedida de novo no próximo acesso.',
-    acao: 'Esquecer', perigo: true,
-  });
-  if (!ok) return;
-  try { localStorage.removeItem(API_KEY_STORAGE); } catch {}
-  location.reload();
+/* RN-06 de Modulo_Login.md: apaga só esta sessão no servidor — outros
+   aparelhos logados continuam valendo. Sem confirmação: ao contrário da
+   antiga "esquecer a chave" (que exigia colar uma chave nova pra voltar),
+   sair é trivialmente reversível — é só logar de novo. */
+async function sair() {
+  try {
+    await fetch(`${API}/auth/logout`, { method: 'POST', headers: authHeaders() });
+  } catch { /* mesmo se a chamada falhar, sai localmente — não vale travar aqui */ }
+  fecharConfig();
+  limparToken();
+  mostrarTelaLogin();
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   TROCAR SENHA (context/Modulo_Login.md, F3)
+   ══════════════════════════════════════════════════════════════════ */
+
+function abrirModalSenha() {
+  document.getElementById('senha-form').reset();
+  document.getElementById('senha-form-erro').style.display = 'none';
+  document.getElementById('modal-backdrop-senha').classList.add('open');
+}
+
+function fecharModalSenha() {
+  document.getElementById('modal-backdrop-senha').classList.remove('open');
+}
+
+document.getElementById('senha-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const atual = document.getElementById('senha-atual').value;
+  const nova = document.getElementById('senha-nova').value;
+  const confirmacao = document.getElementById('senha-nova-confirmar').value;
+  const erro = document.getElementById('senha-form-erro');
+  const btn = document.getElementById('senha-form-submit');
+  erro.style.display = 'none';
+
+  if (nova.length < 8) {
+    erro.textContent = 'A nova senha precisa ter pelo menos 8 caracteres.';
+    erro.style.display = 'block';
+    return;
+  }
+  if (nova !== confirmacao) {
+    erro.textContent = 'A confirmação não bate com a nova senha.';
+    erro.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/auth/trocar-senha`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ senha_atual: atual, nova_senha: nova }),
+    });
+    // 401 aqui é sessão expirada de verdade (verificar_sessao) — "senha atual
+    // errada" é sempre 400, nunca 401 (RN-07: os dois não podem se confundir).
+    if (tratarNaoAutorizado(res)) return;
+    if (res.status === 400) {
+      erro.textContent = 'Senha atual incorreta.';
+      erro.style.display = 'block';
+      return;
+    }
+    if (!res.ok) {
+      erro.textContent = 'Não consegui trocar a senha. Tente de novo.';
+      erro.style.display = 'block';
+      return;
+    }
+    fecharModalSenha();
+    toast('Senha alterada ✓ — outros aparelhos logados precisarão entrar de novo.');
+  } catch {
+    erro.textContent = 'Não consegui falar com o servidor.';
+    erro.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 /* ══════════════════════════════════════════════════════════════════
    MEDICAMENTOS
