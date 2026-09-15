@@ -42,6 +42,8 @@
     --nao-bg:    #FDEAEA;
     --anulado:    #6B7280;
     --anulado-bg: #EEF1F5;
+    --preto:      #F5F7FA;
+    --preto-bg:   #1F2933;
     --shadow:    0 1px 3px rgba(20,40,80,.08), 0 1px 8px rgba(20,40,80,.05);
   }
 
@@ -66,6 +68,8 @@
       --nao-bg:    #2A0A0A;
       --anulado:    #9AA7B8;
       --anulado-bg: #1B2634;
+      --preto:      #E7ECF3;
+      --preto-bg:   #05070A;
       --shadow:    0 1px 3px rgba(0,0,0,.3);
     }
   }
@@ -90,6 +94,8 @@
     --nao-bg:    #2A0A0A;
     --anulado:    #9AA7B8;
     --anulado-bg: #1B2634;
+    --preto:      #E7ECF3;
+    --preto-bg:   #05070A;
     --shadow:    0 1px 3px rgba(0,0,0,.3);
   }
 
@@ -387,7 +393,8 @@
   .med-card.compacta .btn-status { padding: 6px 10px; }
 
   .med-tomados {
-    border: 1px dashed var(--border);
+    border: 1px dashed var(--tomado);
+    background: var(--tomado-bg);
     border-radius: 12px;
     padding: 10px 12px;
     margin-top: 4px;
@@ -402,7 +409,7 @@
   }
   .med-tomados > summary::-webkit-details-marker { display: none; }
   .med-tomados[open] > summary { margin-bottom: 10px; }
-  .med-tomados-titulo { font-size: .85rem; font-weight: 700; }
+  .med-tomados-titulo { font-size: .85rem; font-weight: 700; color: var(--tomado); }
   /* A lista de nomes some quando o bloco abre: ali embaixo ela seria a mesma
      informação duas vezes, uma resumida e outra inteira. */
   .med-tomados-resumo {
@@ -628,7 +635,7 @@
   }
   .habito-status-chip.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   }
   .habito-status-chip.cor-nao-feito { background: var(--nao-bg);      color: var(--nao);      }
-  .habito-status-chip.cor-anulado   { background: var(--anulado-bg); color: var(--anulado); }
+  .habito-status-chip.cor-anulado   { background: var(--preto-bg);    color: var(--preto);    }
 
   /* ── Botão único "Opções" — abre a folha com marcação/editar/excluir ── */
   .btn-opcoes {
@@ -720,7 +727,7 @@
 
   .opcao-btn.ativo.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   border-color: transparent; }
   .opcao-btn.ativo.cor-nao-feito { background: var(--nao-bg);      color: var(--nao);      border-color: transparent; }
-  .opcao-btn.ativo.cor-anulado   { background: var(--anulado-bg); color: var(--anulado); border-color: transparent; }
+  .opcao-btn.ativo.cor-anulado   { background: var(--preto-bg);   color: var(--preto);  border-color: transparent; }
   .opcao-btn.perigo { color: var(--nao); }
 
   .opcao-divider { height: 1px; background: var(--border); margin: 6px 2px; }
@@ -1159,6 +1166,10 @@
     color: var(--tomado);
   }
   .tarefa-marca.cancelada { background: var(--anulado-bg); color: var(--anulado); }
+  /* Reaproveitadas pelo checkmark dos hábitos (habitoRowHtml) — mesmos estados
+     de marcação que o de tarefas, só com mais dois status possíveis. */
+  .tarefa-marca.marca-nao     { background: var(--nao-bg);   color: var(--nao); }
+  .tarefa-marca.marca-anulado { background: var(--preto-bg); color: var(--preto); }
   .btn-concluir.sub, .tarefa-marca.sub { width: 21px; height: 21px; border-radius: 6px; font-size: .7rem; }
   .tarefa-marca.agendada { background: transparent; color: var(--muted); }
   .tarefa-row.agendada { opacity: .8; }
@@ -1992,6 +2003,8 @@
       <div id="agua-estado"><div class="loading"><div class="spinner"></div></div></div>
 
       <div id="agua-conteudo" style="display:none">
+        <div class="streak-chip" id="agua-streak"><span>🔥</span> <strong>0</strong> dias seguidos</div>
+
         <div class="agua-topo">
           <div class="agua-anel-wrap">
             <svg class="agua-anel" viewBox="0 0 120 120" aria-hidden="true">
@@ -2004,10 +2017,6 @@
               <span class="agua-pct" id="agua-pct">0%</span>
             </div>
           </div>
-        </div>
-
-        <div style="text-align:center">
-          <div class="streak-chip" id="agua-streak"><span>🔥</span> <strong>0</strong> dias seguidos</div>
         </div>
 
         <div class="agua-botoes">
@@ -3619,9 +3628,23 @@ function labelStatusHabito(status) {
   return 'Pendente';
 }
 
+// Mesma peça visual de Tarefas (.btn-concluir/.tarefa-marca): um toque no
+// quadradinho já marca FEITO, sem abrir a folha de opções. Os outros dois
+// status (Não feito, Anulado) continuam só pelo ⋯ — não fazem sentido como
+// ação de um toque só, porque não são "a coisa que eu queria fazer agora".
+function habitoMarcaHtml(h) {
+  const s = h.status_hoje;
+  if (s === 'FEITO') return `<span class="tarefa-marca" aria-label="Feito">✓</span>`;
+  if (s === 'NAO_FEITO') return `<span class="tarefa-marca marca-nao" aria-label="Não feito">✕</span>`;
+  if (s === 'ANULADO') return `<span class="tarefa-marca marca-anulado" aria-label="Anulado">–</span>`;
+  return `<button class="btn-concluir" onclick="marcarHabito('${h.id}', 'FEITO')"
+             aria-label="Marcar ${escHtml(h.nome)} como feito" title="Marcar como feito"></button>`;
+}
+
 function habitoRowHtml(h) {
   const s = h.status_hoje;
   return `<div class="habito-row">
+    ${habitoMarcaHtml(h)}
     <div class="habito-nome">${escHtml(h.nome)}</div>
     <span class="habito-status-chip ${corClasseStatus(s)}">${labelStatusHabito(s)}</span>
     <button class="btn-opcoes" onclick="abrirOpcoesHabito('${h.id}')" aria-label="Opções de ${escHtml(h.nome)}">⋯</button>
@@ -4310,7 +4333,9 @@ function contaRowHtml(c) {
          <span class="conta-venc">pago em ${dataCurta(c.pago_em)}</span>
          <span class="conta-valor">${formatarDinheiro(c.valor_pago_centavos)}</span>`
       : `${c.valor_centavos != null
-            ? `<span class="conta-valor">${formatarDinheiro(c.valor_centavos)}</span>`
+            ? (c.valor_centavos === 0
+                ? ''
+                : `<span class="conta-valor">${formatarDinheiro(c.valor_centavos)}</span>`)
             : '<span class="conta-valor sem-valor">sem valor definido</span>'}
          ${atrasada ? '<span class="badge-atrasado">Atrasado</span>' : ''}`}`;
 

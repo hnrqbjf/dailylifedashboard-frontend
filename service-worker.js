@@ -7,11 +7,15 @@
 // manifest.json, ícones) — senão o navegador continua servindo a versão
 // antiga guardada. Foi o que aconteceu com a trava de orientação no
 // manifest: sem bump, o PWA instalado seguia lendo o manifest velho.
+// v9 (14/09/2026): tela de login, trocar senha e sair (context/Modulo_Login.md).
+// v10 (15/09/2026): checkmark nos hábitos, cores das badges pendente/anulado,
+// "sem valor definido" some quando a conta vale zero, streak da água no canto
+// (igual hábitos), e um verde no bloco de remédios já tomados.
 // v8 (14/09/2026): água 480→450 e "Outro valor" como botão, tarefas ordenadas
 // por prioridade com subtarefas recolhíveis, remédios tomados em bloco
 // resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
 // versões chegou a ir para produção separada.
-const CACHE_NAME = 'dld-shell-v9';
+const CACHE_NAME = 'dld-shell-v10';
 // v6: módulo de Agenda implementado (o card deixa de ser "em breve").
 // v5: módulo de Tasks implementado.
 //
