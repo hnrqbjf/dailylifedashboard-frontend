@@ -14,11 +14,18 @@
 // v11 (15/09/2026): dashboard desktop — resumo carregado sem card aberto
 // ocupava a largura toda e deixava a área de conteúdo vazia; agora ocupa só
 // a coluna de conteúdo (como o convite fazia) até algum módulo abrir.
+// v12 (17/09/2026): resumo do dia passa a viver DENTRO do card do módulo
+// aberto, não numa faixa separada acima da grade; Contas e Agenda nunca mais
+// somem do resumo (mostram "em dia"/"nada hoje" com zero); remédios ganham o
+// mesmo checkbox+chip de status de hábitos; hábitos ganham um bloco único de
+// "já concluídos", igual ao de remédios; "sem valor definido" some também
+// quando o valor é nulo (não só zero); grupos de tarefas (inclusive a caixa
+// sem grupo) ficam individualmente colapsáveis, com um botão pra fechar todos.
 // v8 (14/09/2026): água 480→450 e "Outro valor" como botão, tarefas ordenadas
 // por prioridade com subtarefas recolhíveis, remédios tomados em bloco
 // resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
 // versões chegou a ir para produção separada.
-const CACHE_NAME = 'dld-shell-v11';
+const CACHE_NAME = 'dld-shell-v12';
 // v6: módulo de Agenda implementado (o card deixa de ser "em breve").
 // v5: módulo de Tasks implementado.
 //

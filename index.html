@@ -390,7 +390,6 @@
   }
   .med-card.compacta .med-nome { font-size: .9rem; font-weight: 500; }
   .med-card.compacta .med-meta { margin-top: 1px; }
-  .med-card.compacta .btn-status { padding: 6px 10px; }
 
   .med-tomados {
     border: 1px dashed var(--tomado);
@@ -423,6 +422,38 @@
   }
   .med-tomados[open] .med-tomados-resumo { display: none; }
 
+  /* ── Hábitos: bloco resumido dos já concluídos (mesma peça de
+     .med-tomados) — cor neutra, não o verde de "tomado": aqui dentro entram
+     FEITO, NÃO FEITO e ANULADO misturados, não só um status só. ── */
+  .habito-concluidos {
+    border: 1px dashed var(--border);
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-top: 4px;
+  }
+  .habito-concluidos > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--muted);
+  }
+  .habito-concluidos > summary::-webkit-details-marker { display: none; }
+  .habito-concluidos[open] > summary { margin-bottom: 10px; }
+  .habito-concluidos-titulo { font-size: .85rem; font-weight: 700; color: var(--text); }
+  .habito-concluidos-resumo {
+    font-size: .75rem;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .habito-concluidos[open] .habito-concluidos-resumo { display: none; }
+
   .med-info { flex: 1; min-width: 0; }
   .med-nome {
     font-size: 1rem;
@@ -452,29 +483,6 @@
     letter-spacing: .3px;
     text-transform: uppercase;
   }
-
-  /* ── Botão de status (Medicamentos) ── */
-  .btn-status {
-    flex-shrink: 0;
-    border: none;
-    cursor: pointer;
-    border-radius: 10px;
-    padding: 8px 14px;
-    font-family: inherit;
-    font-size: .8rem;
-    font-weight: 700;
-    letter-spacing: .2px;
-    transition: opacity .12s, transform .1s;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .btn-status:active { transform: scale(.96); }
-  .btn-status:disabled { opacity: .45; cursor: default; }
-
-  .btn-status.tomado   { background: var(--tomado-bg);   color: var(--tomado);   }
-  .btn-status.pendente { background: var(--pendente-bg); color: var(--pendente); }
-  .btn-status.nao      { background: var(--nao-bg);      color: var(--nao);      cursor: default; }
 
   /* ── Empty state ── */
   .empty {
@@ -539,6 +547,32 @@
   }
   .date-label-btn:hover { color: var(--text); }
 
+  /* ── Tarefas: agrupamento de ações no cabeçalho da lista (17/09/2026) —
+     o botão "Grupos" fica colado no "+", sem separar os dois com
+     `justify-content: space-between` do .list-header inteiro. ── */
+  .tarefas-header-acoes { display: flex; align-items: center; gap: 6px; }
+  .btn-recolher-grupos {
+    flex-shrink: 0;
+    height: 30px;
+    padding: 0 8px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    color: var(--muted);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .3px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: .65;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    border-radius: 6px;
+    transition: opacity .12s, background .12s;
+  }
+  .btn-recolher-grupos:hover { opacity: 1; background: var(--accent-bg); }
+
   .btn-hoje {
     border: none;
     background: var(--accent-bg);
@@ -580,22 +614,6 @@
     pointer-events: none;
   }
 
-  /* ── Status somente leitura (dias passados de Medicamentos) ── */
-  .status-readonly {
-    flex-shrink: 0;
-    border-radius: 10px;
-    padding: 8px 14px;
-    font-size: .8rem;
-    font-weight: 700;
-    letter-spacing: .2px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .status-readonly.tomado   { background: var(--tomado-bg);   color: var(--tomado);   }
-  .status-readonly.pendente { background: var(--pendente-bg); color: var(--pendente); }
-  .status-readonly.nao      { background: var(--nao-bg);      color: var(--nao);      }
-
   /* ── Hábitos: linha por hábito ── */
   .habito-grupo { margin-bottom: 14px; }
   .habito-grupo:last-child { margin-bottom: 0; }
@@ -622,8 +640,10 @@
     text-overflow: ellipsis;
   }
 
-  /* ── Chip de status atual (só leitura — a ação fica dentro de "Opções") ── */
-  .habito-status-chip {
+  /* ── Chip de status atual (só leitura — a ação fica dentro de "Opções") ──
+     Nome genérico (era .habito-status-chip): a partir de 17/09/2026 também
+     usado por Medicamentos (linhaMedicamento), mesma peça visual. */
+  .status-chip {
     flex-shrink: 0;
     font-size: .72rem;
     font-weight: 700;
@@ -633,9 +653,9 @@
     color: var(--muted);
     background: var(--border);
   }
-  .habito-status-chip.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   }
-  .habito-status-chip.cor-nao-feito { background: var(--nao-bg);      color: var(--nao);      }
-  .habito-status-chip.cor-anulado   { background: var(--preto-bg);    color: var(--preto);    }
+  .status-chip.cor-feito     { background: var(--tomado-bg);   color: var(--tomado);   }
+  .status-chip.cor-nao-feito { background: var(--nao-bg);      color: var(--nao);      }
+  .status-chip.cor-anulado   { background: var(--preto-bg);    color: var(--preto);    }
 
   /* ── Botão único "Opções" — abre a folha com marcação/editar/excluir ── */
   .btn-opcoes {
@@ -1011,6 +1031,26 @@
   .tarefa-caixa-grupo:last-child { margin-bottom: 0; }
   .tarefa-caixa-grupo > .tarefa-grupo-titulo { margin-bottom: 8px; }
 
+  /* ── Grupo nomeado colapsável (17/09/2026): a caixa vira <details>, o
+     título vira <summary> — mesma seta de .tarefa-recolhivel, só que aqui
+     aberto por padrão (um grupo escondido de cara não seria descoberto). ── */
+  .tarefa-caixa-grupo > summary.tarefa-grupo-titulo {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tarefa-caixa-grupo > summary.tarefa-grupo-titulo::-webkit-details-marker { display: none; }
+  .tarefa-caixa-grupo > summary.tarefa-grupo-titulo::before { content: '▾'; font-size: .65rem; }
+  .tarefa-caixa-grupo:not([open]) > summary.tarefa-grupo-titulo { margin-bottom: 0; }
+  .tarefa-caixa-grupo:not([open]) > summary.tarefa-grupo-titulo::before { content: '▸'; }
+
+  /* Sem-grupo (a "caixa de entrada", RN-33) também é <details>, mas com o
+     <summary> nativo escondido: quem abre/fecha é o rótulo externo "Suas
+     tarefas" (list-header), não um cabeçalho duplicado aqui dentro. */
+  #tarefas-sem-grupo > summary { display: none; }
+
   .tarefa-row {
     position: relative;
     background: var(--bg);
@@ -1166,6 +1206,12 @@
     color: var(--tomado);
   }
   .tarefa-marca.cancelada { background: var(--anulado-bg); color: var(--anulado); }
+  /* Quando o marcador é um <button> (Medicamentos: TOMADO continua clicável
+     pra desmarcar, ver medMarcaHtml) — zera o estilo padrão de botão do
+     navegador, mantendo a mesma caixinha do <span> normal. */
+  button.tarefa-marca { border: none; padding: 0; font: inherit; cursor: pointer; }
+  button.tarefa-marca:hover { filter: brightness(0.95); }
+  button.tarefa-marca:active { transform: scale(.92); }
   /* Reaproveitadas pelo checkmark dos hábitos (habitoRowHtml) — mesmos estados
      de marcação que o de tarefas, só com mais dois status possíveis. */
   .tarefa-marca.marca-nao     { background: var(--nao-bg);   color: var(--nao); }
@@ -1553,7 +1599,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .spinner { animation: none; }
-    .btn-status, .btn-add, #toast { transition: none; }
+    .btn-concluir, .tarefa-marca, .btn-add, #toast { transition: none; }
   }
   /* ══ Resumo do dia — componente único em três estados ══
      (Modulo_Dashboard.md, RN-10) "convite" e "carregado" são sub-blocos
@@ -1673,23 +1719,30 @@
   .resumo-vazio-tudo { margin: 4px 0; color: var(--muted); font-size: .86rem; }
 
   /* Um card aberto: o convite some (não faz sentido convidar a carregar algo
-     que já está sendo lido), e o carregado vira faixa — compacto, uma linha
-     de chips roláveis, sem rótulo (só ícone + valor: o rótulo é o que mais
-     pesa visualmente e é o que menos falta quando o espaço é curto).
-     `.painel-vazio` agora é IRMÃO de `.modulos-grid` (vem antes dele no
-     HTML), não descendente — por isso o `:has()` usa o combinador `~` por
-     dentro para enxergar um card aberto lá na frente. */
+     que já está sendo lido) — regra por `:has()` porque o convite nunca muda
+     de lugar no DOM. */
   .painel-vazio:not(.resumo-carregado):has(~ .modulos-grid .card.open) { display: none; }
-  .painel-vazio.resumo-carregado:has(~ .modulos-grid .card.open) { padding: 8px 10px; }
-  .painel-vazio:has(~ .modulos-grid .card.open) .resumo-carregado-topo { display: none; }
-  .painel-vazio:has(~ .modulos-grid .card.open) .resumo-blocos {
+
+  /* Resumo carregado, com um card aberto: em vez de uma faixa presa no topo
+     da PÁGINA (como era até 16/09/2026), `moverResumoParaCard()` (JS) muda o
+     próprio nó `#painel-vazio` de pai — ele passa a ser o primeiro filho do
+     `.card-body` do módulo aberto — e marca este estado com a classe abaixo.
+     Pedido do responsável em 17/09/2026: a faixa é sobre o módulo que está
+     olhando, então mora dentro do card dele, não fora. Compacto — uma linha
+     de chips roláveis, sem rótulo (o rótulo é o que mais pesa visualmente e
+     o que menos falta quando o espaço é curto) — e sem o título/botão de
+     minimizar: dentro do card já fica claro o que é, e minimizar importa
+     menos aqui do que importava preso no topo da página inteira. */
+  .painel-vazio.resumo-em-card { padding: 8px 10px; margin-bottom: 12px; }
+  .painel-vazio.resumo-em-card .resumo-carregado-topo { display: none; }
+  .painel-vazio.resumo-em-card .resumo-blocos {
     display: flex;
     overflow-x: auto;
     gap: 6px;
     -webkit-overflow-scrolling: touch;
   }
-  .painel-vazio:has(~ .modulos-grid .card.open) .resumo-bloco { flex: 0 0 auto; padding: 6px 10px; }
-  .painel-vazio:has(~ .modulos-grid .card.open) .resumo-bloco-rotulo { display: none; }
+  .painel-vazio.resumo-em-card .resumo-bloco { flex: 0 0 auto; padding: 6px 10px; }
+  .painel-vazio.resumo-em-card .resumo-bloco-rotulo { display: none; }
 
   @media (max-width: 899px) {
     .resumo-minimizar { display: inline-block; }
@@ -1751,32 +1804,17 @@
     }
     .painel-vazio:not(.resumo-carregado) .resumo-convite { width: 100%; }
 
-    /* Carregado, SEM nenhum card aberto (estado 2): ocupa a área de conteúdo
-       à direita do trilho, igual o convite ocupava antes de carregar — é o
-       "card central" do dashboard. Sem esta regra, ao carregar o resumo ele
-       pulava direto para a faixa (regra seguinte) e a área de conteúdo
-       ficava vazia até abrir algum módulo — o bug que faltava fechar aqui. */
-    .painel-vazio.resumo-carregado:not(:has(~ .modulos-grid .card.open)) {
+    /* Carregado, SEM nenhum card aberto: ocupa a área de conteúdo à direita
+       do trilho, igual o convite ocupava antes de carregar — é o "card
+       central" do dashboard. Com um card aberto, `#painel-vazio` nem é mais
+       irmão de `.modulos-grid` (JS o move para dentro do `.card-body` — ver
+       `moverResumoParaCard()`), então flui normal dentro da área que
+       `.card.open > .card-body` já ocupa, sem precisar de posicionamento de
+       grade próprio — daí o `:not(.resumo-em-card)` aqui. */
+    .painel-vazio.resumo-carregado:not(.resumo-em-card) {
       grid-column: 2;
       grid-row: 1 / span 30;
       align-self: start;
-    }
-
-    /* Carregado, COM um card aberto (estado 3, faixa): usa a largura inteira
-       (`1 / -1`) em cima do trilho — por isso precisa de `grid-row: 1`
-       EXPLÍCITO. Sem isso, `grid-auto-flow: row dense` tenta encaixar um item
-       de largura total numa linha onde a coluna 2 já está ocupada pelo corpo
-       do card aberto (`grid-row: 1 / span 30` logo abaixo) e só acha vaga lá
-       no fim da grade — foi o bug da faixa aparecendo embaixo da página em
-       vez do topo. Com a linha fixa aqui, o corpo do card aberto é quem cede
-       espaço (regra seguinte). */
-    .painel-vazio.resumo-carregado:has(~ .modulos-grid .card.open) { grid-column: 1 / -1; grid-row: 1; }
-
-    /* Só precisa ceder quando o resumo carregado está de fato ocupando a
-       linha 1 (senão, sem resumo carregado, o corpo do card continua
-       alinhado com o topo do trilho, como sempre foi). */
-    .painel-vazio.resumo-carregado ~ .modulos-grid .card.open > .card-body {
-      grid-row: 2 / span 30;
     }
 
     .card.open {
@@ -1907,16 +1945,15 @@
   <div class="conteudo-principal">
 
   <!-- Resumo do dia — mesmo componente em três estados (Modulo_Dashboard.md
-       RN-10): convite (nada carregado), carregado (um bloco por módulo) e
-       faixa (compacto, quando um card abre — regido por CSS via
-       `:has(~ .modulos-grid .card.open)`, nenhum JS precisa saber disso).
-       Fica FORA de `.modulos-grid` de propósito: dentro do grid, o
-       `grid-auto-flow: row dense` competia com os `.card.open` explicitamente
-       posicionados (`display:contents` + `grid-row:1/span 30`) e jogava a
-       faixa pro fim da página em vez do topo. Como irmão que vem antes do
-       grid (dentro de `.conteudo-principal`), disputa a mesma grade sem essa
-       disputa de posicionamento automático: sua linha/coluna é sempre
-       explícita, nunca calculada por `dense`. -->
+       RN-10, revisado em 17/09/2026): convite (nada carregado), carregado
+       (um bloco por módulo, aqui fora, ao lado do trilho) e "em card" —
+       quando um módulo abre, `moverResumoParaCard()` (JS, perto de
+       `toggleCard`) muda este nó de pai para dentro do `.card-body` do card
+       aberto, e `devolverResumoAoLugar()` desfaz isso ao fechar. Continua
+       sendo o MESMO nó (nunca clonado) — só troca de posição no DOM, então
+       nada do estado interno dele se perde na troca. Por isso mora aqui,
+       FORA de `.modulos-grid`, quando nenhum card está aberto: é o lugar
+       para onde ele volta. -->
   <div class="painel-vazio" id="painel-vazio">
     <div class="resumo-convite" id="resumo-convite">
       <span class="painel-vazio-icone">📊</span>
@@ -2093,9 +2130,21 @@
     <div class="card-body" id="tarefas-body">
       <div class="list-header">
         <!-- Sem navegação por período, diferente de Medicamentos e Contas:
-             uma tarefa sem prazo não pertence a dia nenhum (RN-04). -->
-        <span class="date-label-btn" style="cursor:default">Suas tarefas</span>
-        <button class="btn-icon-add" aria-label="Adicionar tarefa" onclick="abrirModalTarefa()">+</button>
+             uma tarefa sem prazo não pertence a dia nenhum (RN-04). Desde
+             17/09/2026 o rótulo também colapsa/expande as tarefas sem grupo
+             (a "caixa de entrada", ver RN-33) — mesmo texto, agora clicável. -->
+        <button type="button" class="date-label-btn" id="tarefas-sem-grupo-toggle"
+                onclick="toggleSemGrupoTarefas()" aria-expanded="true" aria-controls="tarefas-sem-grupo">
+          <span id="tarefas-sem-grupo-seta" aria-hidden="true">▾</span> Suas tarefas
+        </button>
+        <div class="tarefas-header-acoes">
+          <button type="button" class="btn-recolher-grupos" id="btn-recolher-grupos"
+                  onclick="toggleTodosGruposTarefas()" title="Minimizar todos os grupos"
+                  aria-label="Minimizar todos os grupos">
+            <span id="tarefas-grupos-seta" aria-hidden="true">▾</span> Grupos
+          </button>
+          <button class="btn-icon-add" aria-label="Adicionar tarefa" onclick="abrirModalTarefa()">+</button>
+        </div>
       </div>
       <div id="tarefas-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
@@ -2706,6 +2755,12 @@ function toggleCard(nomeModulo) {
   card.classList.toggle('open', abrindo);
   header.setAttribute('aria-expanded', String(abrindo));
 
+  if (abrindo) {
+    moverResumoParaCard(nomeModulo);
+  } else {
+    devolverResumoAoLugar();
+  }
+
   if (abrindo && !state.iniciado) {
     state.iniciado = true;
     if (state.init) state.init();
@@ -2727,12 +2782,38 @@ function fecharCard(nomeModulo) {
   cardState[nomeModulo].open = false;
   card.classList.remove('open');
   card.querySelector('.card-header').setAttribute('aria-expanded', 'false');
+  devolverResumoAoLugar();
 }
 
 function minimizarTudo() {
   Object.keys(cardState).forEach(nomeModulo => {
     if (cardState[nomeModulo].open) fecharCard(nomeModulo);
   });
+}
+
+/* RN-10 revisado (Modulo_Dashboard.md, 17/09/2026): o resumo carregado mora
+   DENTRO do card aberto, não mais numa faixa presa no topo da página. Move o
+   MESMO nó `#painel-vazio` de pai (nunca clona nem recria) — por isso nada
+   do estado interno dele (blocos já renderizados, preferência de minimizar)
+   se perde na troca. `.resumo-em-card` é só quem liga o CSS compacto (ver
+   folha de estilo); a decisão de QUANDO trocar de pai é toda daqui. Sem
+   resumo carregado ainda (estado convite), não há o que mover — o convite
+   continua tratado por CSS puro (`:has()`), como sempre foi. */
+function moverResumoParaCard(nomeModulo) {
+  if (!resumoCarregado) return;
+  const painel = document.getElementById('painel-vazio');
+  const corpo = document.querySelector(`#card-${nomeModulo} .card-body`);
+  if (!corpo || painel.parentElement === corpo) return;
+  corpo.insertBefore(painel, corpo.firstChild);
+  painel.classList.add('resumo-em-card');
+}
+
+function devolverResumoAoLugar() {
+  const painel = document.getElementById('painel-vazio');
+  const grade = document.querySelector('.modulos-grid');
+  if (!grade || painel.parentElement === grade.parentElement) return;
+  grade.parentElement.insertBefore(painel, grade);
+  painel.classList.remove('resumo-em-card');
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2821,9 +2902,14 @@ function blocosDeResumo(r) {
     blocos.push({ modulo: 'agua', icone: '💧', rotulo: 'água', valor: `${pct}%` });
   }
   if (r.contas) {
+    // Exceção a RN-06 (Modulo_Dashboard.md): diferente dos outros blocos,
+    // Contas sempre aparece quando há conta cadastrada, mesmo com zero
+    // vencida — é o bloco que mais importa conferir "está tudo certo?".
     blocos.push({
       modulo: 'contas', icone: '🧾', rotulo: 'contas',
-      valor: `${r.contas.vencidas} vencida${r.contas.vencidas > 1 ? 's' : ''}`,
+      valor: r.contas.vencidas > 0
+        ? `${r.contas.vencidas} vencida${r.contas.vencidas > 1 ? 's' : ''}`
+        : 'em dia',
     });
   }
   if (r.tarefas) {
@@ -2832,13 +2918,19 @@ function blocosDeResumo(r) {
       valor: `${r.tarefas.pendentes} pendente${r.tarefas.pendentes > 1 ? 's' : ''}`,
     });
   }
-  if (r.agenda && r.agenda.hoje_total > 0) {
-    const hora = r.agenda.proximo_hora ? ` ${r.agenda.proximo_hora.slice(0, 5)}` : '';
-    const mais = r.agenda.hoje_total > 1 ? ` +${r.agenda.hoje_total - 1}` : '';
-    blocos.push({
-      modulo: 'agenda', icone: '📅', rotulo: 'agenda',
-      valor: `${r.agenda.proximo_titulo}${hora}${mais}`,
-    });
+  if (r.agenda) {
+    // CA-04 (Modulo_Dashboard.md): sem compromisso hoje, mostra texto —
+    // nunca "0" isolado, e o bloco não some (bug corrigido: antes só
+    // aparecia com hoje_total > 0).
+    let valor;
+    if (r.agenda.hoje_total > 0) {
+      const hora = r.agenda.proximo_hora ? ` ${r.agenda.proximo_hora.slice(0, 5)}` : '';
+      const mais = r.agenda.hoje_total > 1 ? ` +${r.agenda.hoje_total - 1}` : '';
+      valor = `${r.agenda.proximo_titulo}${hora}${mais}`;
+    } else {
+      valor = 'nada hoje';
+    }
+    blocos.push({ modulo: 'agenda', icone: '📅', rotulo: 'agenda', valor });
   }
 
   return blocos;
@@ -3319,16 +3411,44 @@ function isAtrasado(horario, statusDia) {
   return agora.getHours() > h || (agora.getHours() === h && agora.getMinutes() > m);
 }
 
-function statusIcon(status) {
-  if (status === 'TOMADO')    return '✓';
-  if (status === 'NAO_TOMADO') return '✗';
-  return '○';
+// Mesmas classes de cor do chip de Hábitos (.status-chip): "tomado" usa o
+// verde de "feito", "não tomado" usa o vermelho de "não feito" — não existe
+// um terceiro estado aqui parecido com "anulado".
+function medStatusClasse(status) {
+  if (status === 'TOMADO') return 'cor-feito';
+  if (status === 'NAO_TOMADO') return 'cor-nao-feito';
+  return '';
 }
 
-function statusLabel(status) {
+function medStatusLabel(status) {
   if (status === 'TOMADO')    return 'Tomado';
   if (status === 'NAO_TOMADO') return 'Não tomado';
-  return 'Marcar';
+  return 'Pendente';
+}
+
+/* Mesma peça visual de Hábitos/Tarefas (.btn-concluir/.tarefa-marca), com uma
+   diferença deliberada: aqui o ✓ de TOMADO continua sendo um botão (não um
+   <span> parado), porque desmarcar precisa continuar a um toque só — não
+   existe opção de status no "⋯" de Medicamentos (só Editar/Excluir), e
+   dentro do bloco "já tomados" (compacta) nem o "⋯" aparece (ver
+   blocoTomados/linhaMedicamento). NAO_TOMADO é o único estado realmente
+   travado (RN 14 do PRD): esse sim é só leitura, sem toque nenhum. */
+function medMarcaHtml(med, hojeSendoVisto) {
+  const s = med.status_dia;
+  if (s === 'NAO_TOMADO') {
+    return `<span class="tarefa-marca marca-nao" aria-label="Não tomado">✕</span>`;
+  }
+  if (s === 'TOMADO') {
+    return hojeSendoVisto
+      ? `<button class="tarefa-marca" onclick="marcarMedicamento('${med.id}', 'PENDENTE')"
+                 aria-label="Desmarcar ${escHtml(med.nome)}" title="Desmarcar">✓</button>`
+      : `<span class="tarefa-marca" aria-label="Tomado">✓</span>`;
+  }
+  // PENDENTE
+  return hojeSendoVisto
+    ? `<button class="btn-concluir" onclick="marcarMedicamento('${med.id}', 'TOMADO')"
+               aria-label="Marcar ${escHtml(med.nome)} como tomado" title="Marcar como tomado"></button>`
+    : `<span class="tarefa-marca agendada" aria-label="Pendente">○</span>`;
 }
 
 /* ── Indicador do cabeçalho de Medicamentos: quantos já foram tomados hoje.
@@ -3403,32 +3523,18 @@ function blocoTomados(tomados, hojeSendoVisto) {
    a um toque, desmarcando ou fechando o bloco. */
 function linhaMedicamento(med, hojeSendoVisto, compacta = false) {
   const atrasado = isAtrasado(med.horario, med.status_dia);
-  const cls = med.status_dia === 'TOMADO' ? 'tomado'
-            : med.status_dia === 'NAO_TOMADO' ? 'nao'
-            : 'pendente';
   const horaFmt = med.horario.substring(0, 5);
 
-  const acaoHtml = hojeSendoVisto
-    ? `<button
-        class="btn-status ${cls}"
-        data-id="${med.id}"
-        data-status="${med.status_dia}"
-        ${med.status_dia === 'NAO_TOMADO' ? 'disabled' : ''}
-        onclick="toggleStatus(this)"
-        ${compacta ? `title="Desmarcar ${escHtml(med.nome)}" aria-label="Desmarcar ${escHtml(med.nome)}"` : ''}
-      >
-        <span>${statusIcon(med.status_dia)}</span>
-        ${compacta ? '' : `<span>${statusLabel(med.status_dia)}</span>`}
-      </button>`
-    : `<span class="status-readonly ${cls}">
-        <span>${statusIcon(med.status_dia)}</span>
-        ${compacta ? '' : `<span>${statusLabel(med.status_dia) === 'Marcar' ? 'Pendente' : statusLabel(med.status_dia)}</span>`}
-      </span>`;
+  // Chip de status: mesma peça de Hábitos (.status-chip), some dentro do
+  // bloco "já tomados" — o cabeçalho do bloco já diz "tomado" por todos.
+  const chipHtml = compacta
+    ? ''
+    : `<span class="status-chip ${medStatusClasse(med.status_dia)}">${medStatusLabel(med.status_dia)}</span>`;
 
   /* O "⋯" só aparece olhando hoje: editar ou excluir a partir de um dia
      passado daria a impressão de mexer no histórico, que é justamente o
      que o módulo não permite. Dentro do bloco dos tomados ele também sai —
-     ver o comentário de `compacta`. */
+     desmarcar continua a um toque no próprio ✓ (ver medMarcaHtml). */
   const opcoesHtml = ehHoje(dataVisualizada) && !compacta
     ? `<button class="btn-opcoes" onclick="abrirOpcoesMedicamento('${med.id}')"
                aria-label="Opções de ${escHtml(med.nome)}">⋯</button>`
@@ -3442,7 +3548,8 @@ function linhaMedicamento(med, hojeSendoVisto, compacta = false) {
         ${atrasado ? '<span class="badge-atrasado">Atrasado</span>' : ''}
       </div>
     </div>
-    ${acaoHtml}
+    ${medMarcaHtml(med, hojeSendoVisto)}
+    ${chipHtml}
     ${opcoesHtml}
   </div>`;
 }
@@ -3465,27 +3572,24 @@ async function loadMeds() {
   }
 }
 
-/* ── Toggle TOMADO / PENDENTE (sempre no dia de hoje) ── */
-async function toggleStatus(btn) {
-  const id = btn.dataset.id;
-  const current = btn.dataset.status;
-  const next = current === 'TOMADO' ? 'PENDENTE' : 'TOMADO';
-
-  btn.disabled = true;
+/* ── Marcar / desmarcar TOMADO (sempre no dia de hoje) — mesmo padrão de
+   marcarHabito, mas sem "trocar direto pra outro status": aqui só existem
+   dois estados alcançáveis por toque (o terceiro, NAO_TOMADO, é automático
+   e travado, RN 14 do PRD). ── */
+async function marcarMedicamento(id, statusAlvo) {
   try {
     const res = await fetch(`${API}/medicamentos/${id}/registro-diario`, {
       method: 'PATCH',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ status: next }),
+      body: JSON.stringify({ status: statusAlvo }),
     });
     if (tratarNaoAutorizado(res)) return;
     if (!res.ok) throw new Error();
-    toast(next === 'TOMADO' ? 'Marcado como tomado ✓' : 'Desmarcado');
+    toast(statusAlvo === 'TOMADO' ? 'Marcado como tomado ✓' : 'Desmarcado');
     await loadMeds();
     notificarEscrita();
   } catch {
     toast('Erro ao atualizar status');
-    btn.disabled = false;
   }
 }
 
@@ -3604,8 +3708,16 @@ function renderHabitos() {
     return;
   }
 
+  /* Concluídos (FEITO/NÃO FEITO/ANULADO) saem das categorias e vão para um
+     bloco único recolhido no fim — mesmo padrão do "já tomados" de
+     Medicamentos (17/09/2026). Um bloco só, juntando todas as categorias,
+     não um por categoria: a ideia é sumir da vista o que já foi decidido
+     hoje, não recriar a mesma grade de categorias em miniatura embaixo. */
+  const pendentes = habitosCache.filter(h => h.status_hoje === 'PENDENTE');
+  const concluidos = habitosCache.filter(h => h.status_hoje !== 'PENDENTE');
+
   const grupos = {};
-  habitosCache.forEach(h => {
+  pendentes.forEach(h => {
     const cat = (h.categoria || '').trim() || 'Sem categoria';
     if (!grupos[cat]) grupos[cat] = [];
     grupos[cat].push(h);
@@ -3622,7 +3734,28 @@ function renderHabitos() {
       <div class="section-label">${escHtml(cat)}</div>
       ${grupos[cat].map(habitoRowHtml).join('')}
     </div>
-  `).join('');
+  `).join('') + blocoHabitosConcluidos(concluidos);
+}
+
+/* Bloco resumido dos hábitos já decididos hoje (FEITO, NÃO FEITO ou
+   ANULADO) — mesma peça de `blocoTomados` (Medicamentos): `<details>`
+   fechado por padrão, cabeçalho com contagem + resumo de uma linha, e cada
+   linha continua clicável (⋯) para reverter. Diferente de Medicamentos, os
+   três status se misturam aqui — o resumo leva o ícone de cada um para não
+   parecer que tudo foi "feito". */
+function blocoHabitosConcluidos(concluidos) {
+  if (!concluidos.length) return '';
+  const iconePorStatus = { FEITO: '✓', NAO_FEITO: '✕', ANULADO: '–' };
+  const nomes = concluidos
+    .map(h => `${escHtml(h.nome)} ${iconePorStatus[h.status_hoje] || ''}`)
+    .join(' · ');
+  return `<details class="habito-concluidos">
+    <summary>
+      <span class="habito-concluidos-titulo">✓ ${concluidos.length} já ${concluidos.length === 1 ? 'concluído' : 'concluídos'}</span>
+      <span class="habito-concluidos-resumo">${nomes}</span>
+    </summary>
+    ${concluidos.map(habitoRowHtml).join('')}
+  </details>`;
 }
 
 function corClasseStatus(status) {
@@ -3657,7 +3790,7 @@ function habitoRowHtml(h) {
   return `<div class="habito-row">
     ${habitoMarcaHtml(h)}
     <div class="habito-nome">${escHtml(h.nome)}</div>
-    <span class="habito-status-chip ${corClasseStatus(s)}">${labelStatusHabito(s)}</span>
+    <span class="status-chip ${corClasseStatus(s)}">${labelStatusHabito(s)}</span>
     <button class="btn-opcoes" onclick="abrirOpcoesHabito('${h.id}')" aria-label="Opções de ${escHtml(h.nome)}">⋯</button>
   </div>`;
 }
@@ -4343,11 +4476,7 @@ function contaRowHtml(c) {
       ? `<span class="conta-sep" aria-hidden="true"></span>
          <span class="conta-venc">pago em ${dataCurta(c.pago_em)}</span>
          <span class="conta-valor">${formatarDinheiro(c.valor_pago_centavos)}</span>`
-      : `${c.valor_centavos != null
-            ? (c.valor_centavos === 0
-                ? ''
-                : `<span class="conta-valor">${formatarDinheiro(c.valor_centavos)}</span>`)
-            : '<span class="conta-valor sem-valor">sem valor definido</span>'}
+      : `${c.valor_centavos ? `<span class="conta-valor">${formatarDinheiro(c.valor_centavos)}</span>` : ''}
          ${atrasada ? '<span class="badge-atrasado">Atrasado</span>' : ''}`}`;
 
   const acao = paga
@@ -4747,20 +4876,30 @@ function renderTarefas() {
     const comGrupo = [...new Set(pendentes.filter(t => t.grupo).map(t => t.grupo))].sort()
       .map(g => [g, pendentes.filter(t => t.grupo === g)]);
 
-    html += `<div class="tarefa-grupo">
+    // <details> em vez de <div>: quem abre/fecha é o rótulo "Suas tarefas"
+    // no cabeçalho (toggleSemGrupoTarefas), não algo dentro desta seção —
+    // por isso o <summary> vem escondido (ver CSS #tarefas-sem-grupo).
+    // Sempre aberto de novo a cada render — estado de sessão, de propósito,
+    // mesma convenção do recolher de subtarefas.
+    html += `<details class="tarefa-grupo" id="tarefas-sem-grupo" open>
+      <summary></summary>
       ${atrasadas.length && semGrupo.length ? '<p class="tarefa-grupo-titulo">Em aberto</p>' : ''}
       ${ordenadas(semGrupo).map(x => tarefaRowHtml(x)).join('')}
-    </div>`;
+    </details>`;
 
     // Dentro do bloco do grupo o chip nunca aparece: o cabeçalho já diz o
     // nome, uma vez, em vez de repeti-lo em cada linha. Foi o contrário disso
     // na primeira versão — com um grupo só, cada linha carregava seu próprio
     // chip, o que é mais repetitivo, não menos.
+    //
+    // Cada grupo também é <details>, colapsável individualmente (17/09/2026)
+    // — aberto por padrão, e o botão discreto "Grupos" no cabeçalho fecha
+    // todos de uma vez (toggleTodosGruposTarefas).
     html += comGrupo.map(([g, itens]) => `
-      <section class="tarefa-caixa-grupo">
-        <p class="tarefa-grupo-titulo">${escHtml(g)}</p>
+      <details class="tarefa-caixa-grupo" open>
+        <summary class="tarefa-grupo-titulo">${escHtml(g)}</summary>
         ${ordenadas(itens).map(x => tarefaRowHtml(x, false)).join('')}
-      </section>`).join('');
+      </details>`).join('');
   }
   if (!atrasadas.length && !pendentes.length) {
     html += `<div class="empty"><span class="icon">✅</span>Nada em aberto. 👌</div>`;
@@ -4783,6 +4922,55 @@ function renderTarefas() {
     </details>`;
   }
   el.innerHTML = html;
+  atualizarSetaSemGrupoTarefas();
+  atualizarSetaGruposTarefas();
+}
+
+/* ── Expandir/retrair os grupos de "Em aberto" (17/09/2026) — estado de
+   sessão, igual ao recolher de subtarefas: some no próximo render da lista,
+   não é gravado em lugar nenhum. Os dois toggles abaixo só mexem no atributo
+   `open` de <details> já presentes no DOM; não refazem `renderTarefas()`. */
+function toggleSemGrupoTarefas() {
+  const det = document.getElementById('tarefas-sem-grupo');
+  if (!det) return;
+  det.open = !det.open;
+  atualizarSetaSemGrupoTarefas();
+}
+
+function atualizarSetaSemGrupoTarefas() {
+  const det = document.getElementById('tarefas-sem-grupo');
+  const seta = document.getElementById('tarefas-sem-grupo-seta');
+  const btn = document.getElementById('tarefas-sem-grupo-toggle');
+  if (!det || !seta || !btn) return;
+  seta.textContent = det.open ? '▾' : '▸';
+  btn.setAttribute('aria-expanded', String(det.open));
+}
+
+// Botão "Grupos": um toque fecha tudo (sem-grupo + cada grupo nomeado); se já
+// estiver tudo fechado, o mesmo toque reabre tudo. "Todos abertos" é o que
+// decide a direção do próximo toque, não um estado guardado à parte.
+function toggleTodosGruposTarefas() {
+  const detalhes = [...document.querySelectorAll(
+    '#tarefas-list > details.tarefa-grupo:not(.tarefa-recolhivel), #tarefas-list > details.tarefa-caixa-grupo'
+  )];
+  if (!detalhes.length) return;
+  const abrir = detalhes.every(d => !d.open);
+  detalhes.forEach(d => { d.open = abrir; });
+  atualizarSetaSemGrupoTarefas();
+  atualizarSetaGruposTarefas();
+}
+
+function atualizarSetaGruposTarefas() {
+  const detalhes = [...document.querySelectorAll(
+    '#tarefas-list > details.tarefa-grupo:not(.tarefa-recolhivel), #tarefas-list > details.tarefa-caixa-grupo'
+  )];
+  const seta = document.getElementById('tarefas-grupos-seta');
+  const btn = document.getElementById('btn-recolher-grupos');
+  if (!seta || !btn) return;
+  const todosFechados = detalhes.length > 0 && detalhes.every(d => !d.open);
+  seta.textContent = todosFechados ? '▸' : '▾';
+  btn.setAttribute('title', todosFechados ? 'Expandir todos os grupos' : 'Minimizar todos os grupos');
+  btn.setAttribute('aria-label', todosFechados ? 'Expandir todos os grupos' : 'Minimizar todos os grupos');
 }
 
 /* `comChip` desliga o chip do grupo nas linhas que estão sob um cabeçalho de
