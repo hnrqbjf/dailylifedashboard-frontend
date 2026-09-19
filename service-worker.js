@@ -21,11 +21,22 @@
 // "já concluídos", igual ao de remédios; "sem valor definido" some também
 // quando o valor é nulo (não só zero); grupos de tarefas (inclusive a caixa
 // sem grupo) ficam individualmente colapsáveis, com um botão pra fechar todos.
+// v13 (18/09/2026): o checkbox de remédios estava depois do nome (à direita);
+// corrigido para ficar na mesma posição de Hábitos — a marca é o primeiro
+// elemento da linha, à esquerda.
+// v14 (19/09/2026): água registra e mostra cada tomada de hoje (horário +
+// quantidade, sem histórico); resposta do botão de água no Telegram mostra o
+// valor clicado, não só o total; fechamento de tarefas no Telegram mostra
+// "concluída(s) hoje" também; chip DÉBITO AUTOMÁTICO em Contas a Pagar
+// (checkbox no formulário, só visual); botão "+" de adicionar tarefa some do
+// cabeçalho do card Tasks minimizado no celular, sem passar pelo modal
+// expandido; criar uma tarefa nova não dispara mais um GET — insere a
+// resposta do POST direto no cache local.
 // v8 (14/09/2026): água 480→450 e "Outro valor" como botão, tarefas ordenadas
 // por prioridade com subtarefas recolhíveis, remédios tomados em bloco
 // resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
 // versões chegou a ir para produção separada.
-const CACHE_NAME = 'dld-shell-v12';
+const CACHE_NAME = 'dld-shell-v14';
 // v6: módulo de Agenda implementado (o card deixa de ser "em breve").
 // v5: módulo de Tasks implementado.
 //

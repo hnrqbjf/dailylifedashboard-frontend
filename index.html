@@ -606,6 +606,25 @@
   .btn-icon-add:hover { opacity: .9; }
   .btn-icon-add:active { transform: scale(.94); }
 
+  /* Botão "+" no cabeçalho de Tasks minimizado, só no celular (item 3 do
+     pedido de 19/09/2026): no desktop o card fica sempre à mão de sobra na
+     tela, então abrir o modal já exige um clique a mais (expandir) sem
+     incomodar; no celular essa expansão é o que mais custa, daí o atalho
+     valer só lá. Continua escondido com o card aberto — o "+" de dentro do
+     corpo (#tarefas-body) já cobre esse caso e duplicar o botão ali confundiria
+     qual dos dois foi clicado.
+
+     Restrito a <560px (abaixo do breakpoint do modo "azulejo" logo adiante):
+     naquele modo o cabeçalho vira grid com áreas nomeadas (icone/nome/sub/
+     chevron) e este botão não tem área própria — deixá-lo fora desse range
+     evita brigar com esse grid. Cobre o celular normal (retrato), que é o
+     caso real do pedido; tablets/telas médias na faixa de "azulejo" seguem
+     sem o atalho, igual ao desktop. */
+  .btn-add-tarefa-minimizado { display: none; }
+  @media (max-width: 559px) {
+    .card-tasks:not(.open) .btn-add-tarefa-minimizado { display: flex; }
+  }
+
   #data-picker-input {
     position: absolute;
     width: 1px;
@@ -884,6 +903,25 @@
   }
   .agua-link:hover { color: var(--accent); }
 
+  .agua-eventos-wrap { margin-top: 14px; }
+  .agua-eventos-titulo {
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .agua-eventos-lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 3px; }
+  .agua-eventos-lista li {
+    display: flex;
+    justify-content: space-between;
+    font-size: .82rem;
+    color: var(--muted);
+    padding: 2px 0;
+  }
+  .agua-eventos-lista .agua-evento-volume { font-weight: 600; color: var(--text); }
+
   @media (prefers-reduced-motion: reduce) {
     .anel-progresso, .btn-agua { transition: none; }
   }
@@ -922,11 +960,18 @@
 
   .conta-info { flex: 1; min-width: 0; }
   .conta-nome {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
     font-size: .95rem;
     font-weight: 600;
+  }
+  .conta-nome .conta-nome-texto {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
   .conta-meta {
     display: flex;
@@ -960,6 +1005,21 @@
     white-space: nowrap;
   }
   .conta-chip.atrasado { background: var(--pendente-bg); color: var(--pendente); }
+
+  /* Chip de débito automático (19/09/2026) — cor própria (accent), de
+     propósito diferente das cores de status (tomado/pendente/nao) acima:
+     é informativo, não diz nada sobre a conta estar paga ou não. */
+  .conta-chip-debito {
+    flex-shrink: 0;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .2px;
+    padding: 3px 8px;
+    border-radius: 99px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    white-space: nowrap;
+  }
 
   .btn-pagar {
     flex-shrink: 0;
@@ -1299,6 +1359,19 @@
     cursor: pointer;
   }
   .tarefa-repetir-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+  /* Mesmo visual do checkbox de recorrência de Tarefas, com nome genérico —
+     reaproveitado pelo checkbox de débito automático em Contas (19/09/2026). */
+  .field-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .field-checkbox input { width: 16px; height: 16px; accent-color: var(--accent); }
 
   /* ═══════════ Agenda ═══════════
      Reaproveita .tarefa-grupo, .tarefa-recolhivel, .tarefa-info e .btn-opcoes.
@@ -2079,6 +2152,14 @@
           <button class="agua-link" onclick="abrirModalAgua('meta')">Editar meta</button>
         </div>
 
+        <!-- Toques de hoje (19/09/2026, RN-21/RN-22 de Modulo_Consumo_Agua.md):
+             registro fugaz, só do dia vigente — some amanhã sozinho, sem
+             estado vazio chamativo. Não participa de total/streak/fechamento. -->
+        <div class="agua-eventos-wrap" id="agua-eventos-wrap" style="display:none">
+          <div class="agua-eventos-titulo">Hoje</div>
+          <ul class="agua-eventos-lista" id="agua-eventos-lista"></ul>
+        </div>
+
         <button class="btn-toggle-calendario" id="btn-toggle-calendario-agua" onclick="toggleCalendarioAgua()">Ver calendário ▾</button>
         <div class="calendario-wrap" id="agua-calendario">
           <div class="cal-grid" id="calendario-agua-grid"></div>
@@ -2124,6 +2205,9 @@
       <span class="card-icone">✅</span>
       <span class="card-nome">Tasks</span>
       <span class="card-sub" id="tarefas-header-badges"></span>
+      <button type="button" class="btn-icon-add btn-add-tarefa-minimizado" aria-label="Adicionar tarefa"
+              onclick="event.stopPropagation(); abrirModalTarefa();"
+              onkeydown="event.stopPropagation();">+</button>
       <span class="chevron">▾</span>
     </div>
 
@@ -2339,6 +2423,10 @@
         <label for="conta-valor">Valor (opcional)</label>
         <input id="conta-valor" name="valor" type="text" inputmode="decimal" placeholder="Ex: 1.850,00">
       </div>
+      <label class="field-checkbox">
+        <input type="checkbox" id="conta-debito-automatico">
+        Débito automático
+      </label>
       <p class="field-aviso" id="conta-edit-aviso" style="display:none">A alteração vale para os meses ainda em aberto — o que já foi pago não muda.</p>
       <button class="btn-add" type="submit" id="conta-form-submit">Adicionar</button>
     </form>
@@ -3540,7 +3628,12 @@ function linhaMedicamento(med, hojeSendoVisto, compacta = false) {
                aria-label="Opções de ${escHtml(med.nome)}">⋯</button>`
     : '';
 
+  // Mesma ordem de Hábitos (habitoRowHtml): marca à ESQUERDA, depois o
+  // conteúdo (aqui nome+hora, lá só o nome), chip, opções. Até 17/09/2026 a
+  // marca vinha depois do nome, à direita — corrigido a pedido do
+  // responsável em 18/09/2026 para ficar visualmente idêntico a Hábitos.
   return `<div class="med-card${compacta ? ' compacta' : ''}">
+    ${medMarcaHtml(med, hojeSendoVisto)}
     <div class="med-info">
       <div class="med-nome">${escHtml(med.nome)}</div>
       <div class="med-meta">
@@ -3548,7 +3641,6 @@ function linhaMedicamento(med, hojeSendoVisto, compacta = false) {
         ${atrasado ? '<span class="badge-atrasado">Atrasado</span>' : ''}
       </div>
     </div>
-    ${medMarcaHtml(med, hojeSendoVisto)}
     ${chipHtml}
     ${opcoesHtml}
   </div>`;
@@ -4034,6 +4126,9 @@ let aguaHoje = { data: null, total_ml: 0, meta_ml: 2000, atingiu_meta: false };
 let streakAgua = 0;
 let calendarioAguaIniciado = false;
 let modoModalAgua = 'outro';
+// Toques de hoje (19/09/2026) — só controle visual do dia vigente, nunca
+// histórico (RN-21/RN-22 de Modulo_Consumo_Agua.md). Mais recente primeiro.
+let eventosAguaHoje = [];
 
 /* Litro só existe como formatação de tela — no banco e na API é sempre ml
    inteiro. 1200 → "1,2 L"; 1250 → "1,25 L"; 2000 → "2 L"; 450 → "450 ml". */
@@ -4048,7 +4143,38 @@ function formatarVolume(ml) {
 
 /* ── Init (só roda na primeira expansão do card) ── */
 async function initAgua() {
-  await Promise.all([carregarStreakAgua(), carregarAguaHoje()]);
+  await Promise.all([carregarStreakAgua(), carregarAguaHoje(), carregarEventosAgua()]);
+}
+
+async function carregarEventosAgua() {
+  try {
+    const res = await fetch(`${API}/agua/eventos`, { headers: authHeaders() });
+    if (tratarNaoAutorizado(res)) return;
+    if (!res.ok) throw new Error();
+    // A API devolve do mais antigo pro mais recente; a tela mostra o inverso.
+    eventosAguaHoje = (await res.json()).reverse();
+    renderEventosAgua();
+  } catch {
+    // Silencioso, igual à streak: é decoração do card, o estado do dia (anel
+    // e botões) segue funcionando normalmente sem esta lista.
+  }
+}
+
+function aguaFormatarHora(iso) {
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderEventosAgua() {
+  const wrap = document.getElementById('agua-eventos-wrap');
+  const lista = document.getElementById('agua-eventos-lista');
+  if (!eventosAguaHoje.length) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = '';
+  lista.innerHTML = eventosAguaHoje
+    .map(ev => `<li><span>${aguaFormatarHora(ev.hora)}</span><span class="agua-evento-volume">+${formatarVolume(ev.volume_ml)}</span></li>`)
+    .join('');
 }
 
 async function carregarStreakAgua() {
@@ -4146,6 +4272,11 @@ async function registrarAgua(volumeMl) {
     if (!res.ok) throw new Error();
     aguaHoje = await res.json();
     renderAgua();
+    // O toque vira linha na hora, sem esperar um refetch de /agua/eventos —
+    // o próprio POST já sabe o volume e "agora" é a hora certa o bastante
+    // para um registro que é decoração do dia, não histórico auditável.
+    eventosAguaHoje.unshift({ hora: new Date().toISOString(), volume_ml: volumeMl });
+    renderEventosAgua();
     toast(!batidaAntes && aguaHoje.atingiu_meta ? 'Meta de hoje batida 🎉' : `+${formatarVolume(volumeMl)}`);
     notificarEscrita();
   } catch {
@@ -4243,6 +4374,12 @@ document.getElementById('agua-form').addEventListener('submit', async e => {
     if (!res.ok) throw new Error();
     aguaHoje = await res.json();
     renderAgua();
+    // Só "outro valor" é um toque de verdade (POST aditivo, RN-21) — "ajuste"
+    // é correção de total (PATCH) e não vira linha na lista de hoje.
+    if (modoModalAgua === 'outro') {
+      eventosAguaHoje.unshift({ hora: new Date().toISOString(), volume_ml: corpo.volume_ml });
+      renderEventosAgua();
+    }
     toast(sucesso);
     fecharModalAgua();
     notificarEscrita();
@@ -4485,7 +4622,7 @@ function contaRowHtml(c) {
 
   return `<div class="conta-row${atrasada ? ' atrasada' : ''}">
     <div class="conta-info">
-      <div class="conta-nome">${escHtml(c.nome)}</div>
+      <div class="conta-nome"><span class="conta-nome-texto">${escHtml(c.nome)}</span>${c.debito_automatico ? '<span class="conta-chip-debito">DÉBITO AUTOMÁTICO</span>' : ''}</div>
       <div class="conta-meta">${meta}</div>
     </div>
     ${acao}
@@ -4640,6 +4777,7 @@ function abrirModalConta(id = null) {
     document.getElementById('conta-dia').value = c ? c.dia_vencimento : '';
     document.getElementById('conta-valor').value =
       c && c.valor_centavos != null ? (c.valor_centavos / 100).toFixed(2).replace('.', ',') : '';
+    document.getElementById('conta-debito-automatico').checked = !!(c && c.debito_automatico);
     btn.textContent = 'Salvar';
     aviso.style.display = '';
   } else {
@@ -4674,7 +4812,8 @@ document.getElementById('conta-form').addEventListener('submit', async e => {
   btn.disabled = true;
   try {
     const editando = contaEditandoId;
-    const corpo = { nome, dia_vencimento: dia, valor_centavos: valor };
+    const debitoAutomatico = document.getElementById('conta-debito-automatico').checked;
+    const corpo = { nome, dia_vencimento: dia, valor_centavos: valor, debito_automatico: debitoAutomatico };
     const res = await fetch(editando ? `${API}/contas/${editando}` : `${API}/contas`, {
       method: editando ? 'PATCH' : 'POST',
       headers: authHeaders({ 'Content-Type': 'application/json' }),
@@ -5303,7 +5442,20 @@ document.getElementById('tarefa-form').addEventListener('submit', async e => {
     }
     toast(editando ? 'Tarefa atualizada ✓' : `${titulo} adicionada ✓`);
     fecharModalTarefa();
-    await carregarTarefas();
+    if (editando) {
+      // Edição pode reordenar grupo/prazo/prioridade de formas variadas —
+      // mais simples e seguro recarregar do que tentar remendar o cache.
+      await carregarTarefas();
+    } else {
+      // Criação (item 3 do pedido de 19/09/2026): o POST já devolve a tarefa
+      // completa, então um GET novo só repetiria o que já se tem. Insere
+      // local e re-renderiza a partir do mesmo `tarefasCache` — mesma fonte
+      // que `carregarTarefas()` usaria, só sem o round-trip de rede.
+      const nova = await res.json();
+      tarefasCache.push(nova);
+      renderTarefas();
+      atualizarHeaderTarefas();
+    }
   } catch {
     toast('Erro ao salvar a tarefa');
   } finally {
