@@ -15,6 +15,17 @@
     var _t = localStorage.getItem('dld_tema');
     if (_t === 'light' || _t === 'dark') document.documentElement.setAttribute('data-theme', _t);
   } catch (e) {}
+  // Mesmo motivo para os módulos ocultos (Configurações → Módulos na tela):
+  // sem isto, eles apareciam por um instante antes de sumir. O script
+  // principal remove este <style> e passa a controlar tudo pela classe.
+  try {
+    var _ids = { resumo: 'painel-vazio', medicamentos: 'card-medicamentos', habitos: 'card-habitos',
+                 agua: 'card-agua', contas: 'card-contas', tasks: 'card-tasks', agenda: 'card-agenda', radar: 'card-radar' };
+    var _oc = JSON.parse(localStorage.getItem('dld_modulos_ocultos') || '[]');
+    var _sel = (Array.isArray(_oc) ? _oc : []).filter(function (m) { return _ids[m]; })
+                 .map(function (m) { return '#' + _ids[m]; }).join(',');
+    if (_sel) document.write('<style id="modulos-ocultos-inicio">' + _sel + '{display:none!important}</style>');
+  } catch (e) {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -356,6 +367,40 @@
   .card-em-breve .card-sub { color: var(--accent); }
   .card-em-breve:not(.open) { border-style: dashed; }
 
+  /* ── Atalho do Radar (08/10/2026) ──
+     Mesmo formato dos módulos, mas com a identidade do Radar: o nome grifado
+     de amarelo marca-texto e um radar pequeno no lugar do emoji. As cores do
+     Radar são fixas aqui (não seguem o --accent do DLD) porque são a marca
+     dele, a mesma da página news/. */
+  .card-radar { --radar-marca: #FFE14D; --radar-tinta: #18202E; --radar-azul: #2F5BEA;
+    display: block; color: inherit; text-decoration: none; }
+  .card-radar .card-header { cursor: pointer; }
+  .card-radar:hover { border-color: var(--radar-azul); }
+  .card-radar:focus-visible { outline: 2px solid var(--radar-azul); outline-offset: 2px; }
+  .radar-nome {
+    font-weight: 800; letter-spacing: -0.01em; padding: 0 3px;
+    background: linear-gradient(transparent 58%, var(--radar-marca) 58%, var(--radar-marca) 92%, transparent 92%);
+  }
+  .radar-icone svg { display: block; }
+  .radar-icone circle { fill: none; stroke: var(--muted); stroke-width: 1.3; }
+  .radar-icone .radar-icone__feixe { fill: var(--radar-azul); opacity: .28; }
+  .radar-icone .radar-icone__ponto { fill: var(--radar-marca); stroke: var(--radar-tinta); stroke-width: .7; }
+  .radar-icone .radar-icone__centro { fill: var(--text); stroke: none; }
+  .card-radar .card-sub { color: var(--muted); }
+  .card-radar .radar-seta { display: flex; color: var(--muted); }
+  @media (min-width: 560px) and (max-width: 899px) {
+    .card-radar .radar-icone svg { width: 30px; height: 30px; }
+  }
+  /* No trilho do desktop os cards são uma linha só e o texto cortaria em
+     "Abrir notícias do…": ali ele desce para baixo do nome. */
+  @media (min-width: 900px) {
+    .card-radar:not(.open) .card-header {
+      display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 1px;
+    }
+    .card-radar .radar-icone { grid-row: 1 / span 2; }
+    .card-radar .card-sub { text-align: left; font-size: .74rem; }
+  }
+
   /* Linha informativa dentro de uma folha de opções (não é botão) */
   .opcao-info {
     padding: 12px 14px;
@@ -572,6 +617,142 @@
     transition: opacity .12s, background .12s;
   }
   .btn-recolher-grupos:hover { opacity: 1; background: var(--accent-bg); }
+
+  /* ── Tarefas: lupa e ordenar grupos (26/09/2026) ──
+     Dois botões quadrados, discretos como o "Grupos" ao lado: a lupa só abre
+     o campo de busca quando tocada, para não ocupar uma linha inteira da
+     lista o tempo todo. */
+  #tarefas-sem-grupo-toggle { white-space: nowrap; }
+  .btn-tarefas-icone { width: 30px; padding: 0; justify-content: center; font-size: .95rem; }
+  .btn-tarefas-icone svg { width: 16px; height: 16px; }
+  .btn-tarefas-icone.ativo { opacity: 1; background: var(--accent-bg); color: var(--accent); }
+
+  /* Celular estreito: cinco controles na mesma linha (rótulo, lupa, ordenar,
+     Grupos, +) — aperta os espaços para o "+" não vazar do card. */
+  @media (max-width: 420px) {
+    .tarefas-header-acoes { gap: 2px; }
+    .tarefas-header-acoes .btn-recolher-grupos:not(.btn-tarefas-icone) { padding: 0 5px; }
+    #tarefas-sem-grupo-toggle { letter-spacing: .4px; padding: 4px 2px; }
+  }
+
+  .tarefas-busca { display: none; align-items: center; gap: 6px; margin: -2px 0 12px; }
+  .tarefas-busca.aberta { display: flex; }
+  .tarefas-busca input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-family: inherit;
+    /* 16px e não .9rem: abaixo disso o Safari do iPhone dá zoom na página
+       ao focar o campo, e a lista pula de lugar. */
+    font-size: 16px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .tarefas-busca input:focus { border-color: var(--accent); }
+  .tarefas-busca input::-webkit-search-cancel-button { display: none; }
+  .tarefas-busca-info { font-size: .75rem; color: var(--muted); margin: -6px 2px 10px; }
+
+  /* ── Módulos na tela (08/10/2026) ──
+     Ocultar é só visual e vale para este aparelho. Uma classe própria em vez
+     do atributo hidden: vários destes elementos ganham display por CSS
+     (painel-vazio é flex, card aberto vira contents no desktop), e o
+     !important aqui é o que garante que nenhum desses estados o traga de volta. */
+  .modulo-oculto { display: none !important; }
+  .modulos-vis-lista { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+  .modulo-vis-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 10px 12px 10px 14px;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  .modulo-vis-row.desligado { opacity: .6; }
+  .modulo-vis-icone { font-size: 1.1rem; width: 22px; text-align: center; flex-shrink: 0; }
+  .modulo-vis-nome { flex: 1; min-width: 0; font-size: .92rem; font-weight: 600; }
+  .modulo-vis-sub { display: block; font-size: .74rem; font-weight: 400; color: var(--muted); }
+  /* Interruptor: um checkbox de verdade (teclado, leitor de tela e o clique
+     no rótulo inteiro funcionam sozinhos), só redesenhado. */
+  .switch {
+    appearance: none;
+    -webkit-appearance: none;
+    flex-shrink: 0;
+    position: relative;
+    width: 42px;
+    height: 24px;
+    margin: 0;
+    border-radius: 99px;
+    background: var(--border);
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgba(0,0,0,.25);
+    transition: transform .15s;
+  }
+  .switch:checked { background: var(--accent); }
+  .switch:checked::after { transform: translateX(18px); }
+  .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+  .modulos-vazio {
+    border: 1.5px dashed var(--border);
+    border-radius: 16px;
+    padding: 26px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: .9rem;
+    line-height: 1.5;
+  }
+  .modulos-vazio button {
+    margin-top: 10px;
+    border: none;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font: inherit;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .dica-modulos { display: none; }
+
+  .ordem-grupos-lista { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; }
+  .ordem-grupo-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 6px 6px 6px 14px;
+  }
+  .ordem-grupo-pos { font-size: .75rem; font-weight: 700; color: var(--muted); width: 18px; flex-shrink: 0; }
+  .ordem-grupo-nome {
+    flex: 1;
+    min-width: 0;
+    font-size: .88rem;
+    font-weight: 700;
+    letter-spacing: .3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ordem-grupo-row .nav-btn { width: 36px; height: 36px; font-size: 1rem; }
 
   .btn-hoje {
     border: none;
@@ -959,10 +1140,16 @@
   .conta-row.atrasada .btn-opcoes  { border-color: var(--nao); color: var(--nao); }
 
   .conta-info { flex: 1; min-width: 0; }
+  /* `flex-wrap` (corrigido em 26/09/2026): o chip de débito automático não
+     encolhe (flex-shrink: 0), e no celular — ainda mais na linha de conta
+     atrasada, onde o badge e o botão "Pagar" disputam a largura — ele não
+     cabia ao lado do nome e vazava por cima do título e do botão. Agora,
+     quando não cabe, ele desce para uma linha própria logo abaixo do nome. */
   .conta-nome {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 3px 6px;
     min-width: 0;
     font-size: .95rem;
     font-weight: 600;
@@ -972,6 +1159,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 0;
+    max-width: 100%;
   }
   .conta-meta {
     display: flex;
@@ -1019,6 +1207,14 @@
     background: var(--accent-bg);
     color: var(--accent);
     white-space: nowrap;
+  }
+  /* Na linha atrasada o fundo é vermelho claro: o chip ganha fundo sólido
+     da superfície para não sumir nem parecer parte do alerta. */
+  .conta-row.atrasada .conta-chip-debito { background: var(--surface); }
+  @media (max-width: 420px) {
+    .conta-chip-debito { font-size: .6rem; padding: 2px 7px; }
+    .conta-row { gap: 8px; padding-left: 12px; }
+    .btn-pagar { padding: 8px 11px; }
   }
 
   .btn-pagar {
@@ -1890,6 +2086,23 @@
       align-self: start;
     }
 
+    /* Resumo do dia oculto (Configurações → Módulos na tela) e nenhum módulo
+       aberto: sem isto, a coluna da direita ficava vazia, sem dizer nada. */
+    body.sem-resumo:not(.sem-modulos) .conteudo-principal:not(:has(.card.open)) .dica-modulos {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      grid-column: 2;
+      grid-row: 1 / span 30;
+      align-self: stretch;
+      min-height: 260px;
+      border: 1.5px dashed var(--border);
+      border-radius: 16px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+    .modulos-vazio { grid-column: 1 / -1; }
+
     .card.open {
       display: contents;  /* o cabeçalho e o corpo viram itens da grade */
     }
@@ -2048,6 +2261,15 @@
       </div>
       <div class="resumo-blocos" id="resumo-blocos"></div>
     </div>
+  </div>
+
+  <!-- Configurações → Módulos na tela: a dica ocupa a área de conteúdo no
+       desktop quando o Resumo do dia está oculto; o aviso aparece se TODOS os
+       módulos estiverem ocultos, para a tela nunca ficar em branco sem motivo. -->
+  <p class="dica-modulos" id="dica-modulos">Escolha um módulo ao lado.</p>
+  <div class="modulos-vazio modulo-oculto" id="modulos-vazio">
+    Todos os módulos estão ocultos neste aparelho.<br>
+    <button type="button" onclick="abrirModulosVisiveis()">Escolher módulos</button>
   </div>
 
   <div class="modulos-grid">
@@ -2222,6 +2444,16 @@
           <span id="tarefas-sem-grupo-seta" aria-hidden="true">▾</span> Suas tarefas
         </button>
         <div class="tarefas-header-acoes">
+          <!-- Lupa e ordenar grupos (26/09/2026). A busca filtra só o que já
+               veio do servidor (tarefasCache) — nenhuma chamada nova. -->
+          <button type="button" class="btn-recolher-grupos btn-tarefas-icone" id="btn-busca-tarefas"
+                  onclick="toggleBuscaTarefas()" title="Buscar nas tarefas" aria-label="Buscar nas tarefas"
+                  aria-expanded="false" aria-controls="tarefas-busca">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                 stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+          </button>
+          <button type="button" class="btn-recolher-grupos btn-tarefas-icone" id="btn-ordem-grupos"
+                  onclick="abrirOrdemGrupos()" title="Ordenar grupos" aria-label="Ordenar grupos">⇅</button>
           <button type="button" class="btn-recolher-grupos" id="btn-recolher-grupos"
                   onclick="toggleTodosGruposTarefas()" title="Minimizar todos os grupos"
                   aria-label="Minimizar todos os grupos">
@@ -2229,6 +2461,13 @@
           </button>
           <button class="btn-icon-add" aria-label="Adicionar tarefa" onclick="abrirModalTarefa()">+</button>
         </div>
+      </div>
+      <div class="tarefas-busca" id="tarefas-busca" role="search">
+        <input id="tarefas-busca-input" type="search" placeholder="Buscar tarefa, subtarefa ou grupo…"
+               autocomplete="off" enterkeyhint="search" aria-label="Buscar nas tarefas"
+               oninput="filtrarTarefas(this.value)"
+               onkeydown="if(event.key==='Escape'){event.preventDefault();fecharBuscaTarefas();}">
+        <button type="button" class="btn-close" aria-label="Fechar busca" onclick="fecharBuscaTarefas()">×</button>
       </div>
       <div id="tarefas-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
@@ -2260,6 +2499,26 @@
     </div>
   </div>
 
+  <!-- ═══════════════ Atalho: Radar de notícias (08/10/2026) ═══════════════
+       Não é um módulo que expande: é um link para outra página (news/), com a
+       identidade visual do Radar — o grifo amarelo e o desenho do radar. Ver
+       context/Modulo_Noticias.md. -->
+  <a class="card card-radar" id="card-radar" href="news/">
+    <div class="card-header">
+      <span class="card-icone radar-icone" aria-hidden="true">
+        <svg viewBox="-12 -12 24 24" width="24" height="24">
+          <circle r="10.5" /><circle r="6" /><path class="radar-icone__feixe" d="M0 0 L0 -10.5 A10.5 10.5 0 0 1 7.4 -7.4 Z" />
+          <circle class="radar-icone__ponto" cx="4.3" cy="-6.4" r="1.7" /><circle class="radar-icone__centro" r="1.3" />
+        </svg>
+      </span>
+      <span class="card-nome"><span class="radar-nome">Radar</span></span>
+      <span class="card-sub">Abrir notícias do Radar</span>
+      <span class="chevron radar-seta" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M5 3h8v8M13 3L4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </div>
+  </a>
+
   </div><!-- /.modulos-grid -->
 
   </div><!-- /.conteudo-principal -->
@@ -2279,6 +2538,20 @@
       <button class="btn-close" aria-label="Fechar" onclick="fecharConfig()">×</button>
     </div>
     <div class="opcoes-lista" id="config-lista"></div>
+  </div>
+</div>
+
+<!-- Modal: Módulos na tela (08/10/2026) — salva só neste aparelho -->
+<div class="modal-backdrop" id="modal-backdrop-modulos" onclick="fecharModalSeFundo(event, 'modal-backdrop-modulos', fecharModulosVisiveis)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-modulos">
+    <div class="modal-header">
+      <h2 id="modal-titulo-modulos">Módulos na tela</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharModulosVisiveis()">×</button>
+    </div>
+    <p class="field-aviso" style="margin: 0 0 10px">Escolha o que aparece no DLD. Vale para este aparelho e
+      pode ser mudado a qualquer momento. Os lembretes do Telegram não mudam.</p>
+    <div class="modulos-vis-lista" id="modulos-vis-lista"></div>
+    <button type="button" class="btn-sub-add" onclick="mostrarTodosModulos()">Mostrar todos</button>
   </div>
 </div>
 
@@ -2544,6 +2817,20 @@
       <button class="btn-close" aria-label="Fechar" onclick="fecharOpcoesTarefa()">×</button>
     </div>
     <div class="opcoes-lista" id="opcoes-lista-tarefa"></div>
+  </div>
+</div>
+
+<!-- Modal: Ordem dos grupos de tarefas (26/09/2026) — salva só neste aparelho -->
+<div class="modal-backdrop" id="modal-backdrop-ordem-grupos" onclick="fecharModalSeFundo(event, 'modal-backdrop-ordem-grupos', fecharOrdemGrupos)">
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-titulo-ordem-grupos">
+    <div class="modal-header">
+      <h2 id="modal-titulo-ordem-grupos">Ordem dos grupos</h2>
+      <button class="btn-close" aria-label="Fechar" onclick="fecharOrdemGrupos()">×</button>
+    </div>
+    <p class="field-aviso" style="margin: 0 0 10px">Use as setas para escolher quais grupos aparecem primeiro na lista.
+      A ordem fica salva neste aparelho.</p>
+    <div class="ordem-grupos-lista" id="ordem-grupos-lista"></div>
+    <button type="button" class="btn-sub-add" onclick="restaurarOrdemGrupos()">Voltar à ordem alfabética</button>
   </div>
 </div>
 
@@ -2841,6 +3128,7 @@ function toggleCard(nomeModulo) {
 
   state.open = abrindo;
   card.classList.toggle('open', abrindo);
+  if (!abrindo && nomeModulo === 'tasks') fecharBuscaTarefas();
   header.setAttribute('aria-expanded', String(abrindo));
 
   if (abrindo) {
@@ -2869,6 +3157,7 @@ function fecharCard(nomeModulo) {
   const card = document.getElementById(`card-${nomeModulo}`);
   cardState[nomeModulo].open = false;
   card.classList.remove('open');
+  if (nomeModulo === 'tasks') fecharBuscaTarefas();
   card.querySelector('.card-header').setAttribute('aria-expanded', 'false');
   devolverResumoAoLugar();
 }
@@ -2902,6 +3191,100 @@ function devolverResumoAoLugar() {
   if (!grade || painel.parentElement === grade.parentElement) return;
   grade.parentElement.insertBefore(painel, grade);
   painel.classList.remove('resumo-em-card');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MÓDULOS NA TELA (Configurações, 08/10/2026)
+   Quais módulos aparecem, salvo neste aparelho — como a ordem dos grupos de
+   Tasks. Ocultar é só visual: nada muda no servidor nem no bot do Telegram,
+   e um módulo oculto não faz nenhuma chamada (nunca é aberto, então o init
+   dele nunca roda). Guarda a lista do que está OCULTO, não do que aparece:
+   assim um módulo novo que entrar no DLD aparece sozinho.
+   ══════════════════════════════════════════════════════════════════ */
+const MODULOS_OCULTOS_STORAGE = 'dld_modulos_ocultos';
+const MODULOS_NA_TELA = [
+  { id: 'resumo',       nome: 'Resumo do dia',   icone: '📊', el: 'painel-vazio', sub: 'O dashboard com um bloco por módulo' },
+  { id: 'medicamentos', nome: 'Medicamentos',    icone: '💊', el: 'card-medicamentos' },
+  { id: 'habitos',      nome: 'Hábitos',         icone: '🧩', el: 'card-habitos' },
+  { id: 'agua',         nome: 'Consumo de água', icone: '💧', el: 'card-agua' },
+  { id: 'contas',       nome: 'Contas a pagar',  icone: '🧾', el: 'card-contas' },
+  { id: 'tasks',        nome: 'Tasks',           icone: '✅', el: 'card-tasks' },
+  { id: 'agenda',       nome: 'Agenda',          icone: '📅', el: 'card-agenda' },
+  { id: 'radar',        nome: 'Radar',           icone: '📡', el: 'card-radar', sub: 'Atalho para as notícias' },
+];
+
+function lerModulosOcultos() {
+  try {
+    const v = JSON.parse(localStorage.getItem(MODULOS_OCULTOS_STORAGE) || '[]');
+    return new Set(Array.isArray(v) ? v : []);
+  } catch { return new Set(); }
+}
+
+function salvarModulosOcultos(ocultos) {
+  try { localStorage.setItem(MODULOS_OCULTOS_STORAGE, JSON.stringify([...ocultos])); } catch {}
+}
+
+function aplicarModulosOcultos() {
+  document.getElementById('modulos-ocultos-inicio')?.remove();
+  const ocultos = lerModulosOcultos();
+  for (const m of MODULOS_NA_TELA) {
+    const el = document.getElementById(m.el);
+    if (!el) continue;
+    const oculto = ocultos.has(m.id);
+    // Um módulo aberto que acabou de ser ocultado fecha antes de sumir, para
+    // o resumo voltar ao lugar e o botão "Minimizar tudo" não ficar preso.
+    if (oculto && cardState[m.id] && cardState[m.id].open) fecharCard(m.id);
+    el.classList.toggle('modulo-oculto', oculto);
+  }
+  const cards = MODULOS_NA_TELA.filter(m => m.id !== 'resumo');
+  const semModulos = cards.every(m => ocultos.has(m.id));
+  document.body.classList.toggle('sem-resumo', ocultos.has('resumo'));
+  document.body.classList.toggle('sem-modulos', semModulos);
+  document.getElementById('modulos-vazio').classList.toggle('modulo-oculto', !semModulos);
+  if (ultimoResumo) renderResumoBlocos(ultimoResumo);
+}
+
+function abrirModulosVisiveis() {
+  renderModulosVisiveis();
+  document.getElementById('modal-backdrop-modulos').classList.add('open');
+}
+
+function fecharModulosVisiveis() {
+  document.getElementById('modal-backdrop-modulos').classList.remove('open');
+}
+
+function renderModulosVisiveis() {
+  const ocultos = lerModulosOcultos();
+  document.getElementById('modulos-vis-lista').innerHTML = MODULOS_NA_TELA.map(m => {
+    const visivel = !ocultos.has(m.id);
+    return `
+      <label class="modulo-vis-row${visivel ? '' : ' desligado'}" for="vis-${m.id}">
+        <span class="modulo-vis-icone" aria-hidden="true">${m.icone}</span>
+        <span class="modulo-vis-nome">${m.nome}${m.sub ? `<span class="modulo-vis-sub">${m.sub}</span>` : ''}</span>
+        <input type="checkbox" class="switch" id="vis-${m.id}" role="switch" ${visivel ? 'checked' : ''}
+               onchange="alternarModuloVisivel('${m.id}', this.checked)">
+      </label>`;
+  }).join('');
+}
+
+function alternarModuloVisivel(id, visivel) {
+  const ocultos = lerModulosOcultos();
+  if (visivel) ocultos.delete(id); else ocultos.add(id);
+  salvarModulosOcultos(ocultos);
+  aplicarModulosOcultos();
+  renderModulosVisiveis();
+  document.getElementById(`vis-${id}`)?.focus();
+  // Resumo reexibido com "carregar sempre" ligado: carrega agora, como na abertura.
+  if (id === 'resumo' && visivel && !resumoCarregado) {
+    try { if (localStorage.getItem(RESUMO_SEMPRE_STORAGE) === '1') carregarResumo(); } catch {}
+  }
+}
+
+function mostrarTodosModulos() {
+  salvarModulosOcultos(new Set());
+  aplicarModulosOcultos();
+  renderModulosVisiveis();
+  toast('Todos os módulos voltaram para a tela');
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -3024,9 +3407,14 @@ function blocosDeResumo(r) {
   return blocos;
 }
 
+let ultimoResumo = null;
+
 function renderResumoBlocos(dados) {
+  ultimoResumo = dados;
   const el = document.getElementById('resumo-blocos');
-  const blocos = blocosDeResumo(dados);
+  // Módulo oculto também some do resumo: o bloco abriria um card que não está na tela.
+  const ocultos = lerModulosOcultos();
+  const blocos = blocosDeResumo(dados).filter(b => !ocultos.has(b.modulo));
 
   el.innerHTML = blocos.length
     ? blocos.map(b => `
@@ -3090,8 +3478,12 @@ function toggleMinimizarResumo() {
    nenhuma chamada na abertura do app — só este módulo, só quando a
    preferência está ligada. Roda depois dos dois restauradores acima, que já
    deixaram a caixa e o botão de minimizar no estado certo. */
+aplicarModulosOcultos();
+
 (function autoCarregarResumoSeSempre() {
   try {
+    // Resumo oculto em "Módulos na tela": nem chama a API.
+    if (lerModulosOcultos().has('resumo')) return;
     if (localStorage.getItem(RESUMO_SEMPRE_STORAGE) === '1') carregarResumo();
   } catch {}
 })();
@@ -3128,6 +3520,9 @@ async function carregarConfig() {
     <div class="opcao-divider"></div>
     <button class="opcao-btn" onclick="fecharConfig(); abrirStatus();">
       <span class="opcao-icone">📡</span>Status do sistema
+    </button>
+    <button class="opcao-btn" onclick="fecharConfig(); abrirModulosVisiveis();">
+      <span class="opcao-icone">👁️</span>Módulos na tela
     </button>
     <button class="opcao-btn" onclick="fecharConfig(); alternarTema();">
       <span class="opcao-icone">🎨</span>Alternar tema
@@ -3763,6 +4158,9 @@ async function carregarHabitosLista() {
     renderHabitos();
     atualizarHeaderHabitos();
   } catch {
+    // Silencioso e já com lista na tela: mantém a lista e só avisa — trocar
+    // tudo por uma tela de erro por causa de uma recarga de fundo seria pior.
+    if (silencioso && tarefasCache.length) { toast('Não consegui atualizar a lista'); return; }
     listEl.innerHTML =
       `<div class="empty"><span class="icon">⚠️</span>Não foi possível conectar ao servidor.<br><small>Verifique sua conexão e tente recarregar a página.</small></div>`;
   }
@@ -4880,6 +5278,140 @@ function gruposEmUso() {
   return [...new Set(tarefasCache.map(t => t.grupo).filter(Boolean))].sort();
 }
 
+/* ── Ordem dos grupos (26/09/2026) ──
+   Escolhida pelo usuário no modal "Ordem dos grupos" e guardada no
+   localStorage — ou seja, POR APARELHO, por decisão do responsável: é o
+   caminho sem backend nem migration. A consequência, aceita: o celular e o
+   computador podem ter ordens diferentes, e limpar os dados do navegador
+   volta para a ordem alfabética.
+
+   Guarda-se a lista de nomes, não posições: grupo que não está na lista
+   (novo, ou nunca reordenado) vai para o fim, em ordem alfabética entre os
+   seus. Grupo que some da tela continua na lista salva e volta ao mesmo lugar
+   quando reaparecer. */
+const ORDEM_GRUPOS_STORAGE = 'dld_ordem_grupos_tarefas';
+
+function lerOrdemGrupos() {
+  try {
+    const v = JSON.parse(localStorage.getItem(ORDEM_GRUPOS_STORAGE) || '[]');
+    return Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+  } catch { return []; }
+}
+
+function salvarOrdemGrupos(lista) {
+  try {
+    if (lista.length) localStorage.setItem(ORDEM_GRUPOS_STORAGE, JSON.stringify(lista));
+    else localStorage.removeItem(ORDEM_GRUPOS_STORAGE);
+  } catch {}
+}
+
+function ordenarGrupos(nomes) {
+  const pos = new Map(lerOrdemGrupos().map((g, i) => [g, i]));
+  return [...nomes].sort((a, b) => {
+    const pa = pos.has(a) ? pos.get(a) : Infinity;
+    const pb = pos.has(b) ? pos.get(b) : Infinity;
+    if (pa !== pb) return pa - pb;
+    return a < b ? -1 : a > b ? 1 : 0;   // mesmo critério do .sort() de antes
+  });
+}
+
+function abrirOrdemGrupos() {
+  renderOrdemGrupos();
+  document.getElementById('modal-backdrop-ordem-grupos').classList.add('open');
+}
+
+function fecharOrdemGrupos() {
+  document.getElementById('modal-backdrop-ordem-grupos').classList.remove('open');
+}
+
+function renderOrdemGrupos() {
+  const el = document.getElementById('ordem-grupos-lista');
+  const grupos = ordenarGrupos(gruposEmUso());
+  if (!grupos.length) {
+    el.innerHTML = '<div class="empty" style="padding:18px 0">Nenhum grupo em uso ainda.</div>';
+    return;
+  }
+  // Índice no onclick, e não o nome: nome de grupo é texto livre, e montá-lo
+  // dentro de um atributo onclick pediria um escape a mais só para isso.
+  el.innerHTML = grupos.map((g, i) => `
+    <div class="ordem-grupo-row">
+      <span class="ordem-grupo-pos">${i + 1}</span>
+      <span class="ordem-grupo-nome">${escHtml(g)}</span>
+      <button type="button" class="nav-btn" onclick="moverGrupo(${i}, -1)" ${i === 0 ? 'disabled' : ''}
+              aria-label="Subir ${escHtml(g)}">↑</button>
+      <button type="button" class="nav-btn" onclick="moverGrupo(${i}, 1)" ${i === grupos.length - 1 ? 'disabled' : ''}
+              aria-label="Descer ${escHtml(g)}">↓</button>
+    </div>`).join('');
+}
+
+function moverGrupo(indice, direcao) {
+  const grupos = ordenarGrupos(gruposEmUso());
+  const destino = indice + direcao;
+  if (destino < 0 || destino >= grupos.length) return;
+  [grupos[indice], grupos[destino]] = [grupos[destino], grupos[indice]];
+  // A ordem salva passa a ser a da tela, seguida dos grupos salvos que não
+  // estão em uso agora (para não perderem o lugar).
+  const fora = lerOrdemGrupos().filter(g => !grupos.includes(g));
+  salvarOrdemGrupos([...grupos, ...fora]);
+  renderOrdemGrupos();
+  renderTarefas();
+}
+
+function restaurarOrdemGrupos() {
+  salvarOrdemGrupos([]);
+  renderOrdemGrupos();
+  renderTarefas();
+  toast('Ordem alfabética restaurada');
+}
+
+/* ── Busca (26/09/2026) ──
+   Filtra só o que já está em `tarefasCache` — nenhuma chamada à API. Casa
+   por título, grupo e título de subtarefa, sem diferenciar acento nem
+   maiúscula; várias palavras precisam aparecer todas (em qualquer ordem).
+   Estado de sessão, como o recolher: fechar a busca ou o card limpa o termo. */
+let buscaTarefas = [];
+
+function normalizarBusca(texto) {
+  return (texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function tarefaCasaBusca(t, termos) {
+  const alvo = normalizarBusca(
+    [t.titulo, t.grupo, ...(t.subtarefas || []).map(s => s.titulo)].filter(Boolean).join(' ')
+  );
+  return termos.every(termo => alvo.includes(termo));
+}
+
+function filtrarTarefas(valor) {
+  buscaTarefas = normalizarBusca(valor).split(/\s+/).filter(Boolean);
+  renderTarefas();
+}
+
+function toggleBuscaTarefas() {
+  const caixa = document.getElementById('tarefas-busca');
+  if (caixa.classList.contains('aberta')) { fecharBuscaTarefas(); return; }
+  caixa.classList.add('aberta');
+  const btn = document.getElementById('btn-busca-tarefas');
+  btn.classList.add('ativo');
+  btn.setAttribute('aria-expanded', 'true');
+  document.getElementById('tarefas-busca-input').focus();
+}
+
+function fecharBuscaTarefas() {
+  const caixa = document.getElementById('tarefas-busca');
+  const input = document.getElementById('tarefas-busca-input');
+  const btn = document.getElementById('btn-busca-tarefas');
+  if (!caixa || !input || !btn) return;
+  caixa.classList.remove('aberta');
+  btn.classList.remove('ativo');
+  btn.setAttribute('aria-expanded', 'false');
+  input.value = '';
+  if (buscaTarefas.length) {
+    buscaTarefas = [];
+    renderTarefas();
+  }
+}
+
 let tarefasCache = [];
 let tarefaEditandoId = null;
 let subtarefaPaiId = null;
@@ -4895,9 +5427,13 @@ function corteFinalizadas() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-async function carregarTarefas() {
+/* `silencioso` (07/10/2026): depois de criar, concluir, editar ou excluir, a
+   lista NÃO pisca o spinner — busca por baixo e redesenha no lugar, mantendo
+   o que estava aberto ou recolhido (ver `capturarVistaTarefas`). O spinner
+   fica só para a primeira carga, quando ainda não há nada na tela. */
+async function carregarTarefas({ silencioso = false } = {}) {
   const listEl = document.getElementById('tarefas-list');
-  listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  if (!silencioso) listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
     const res = await fetch(`${API}/tarefas?finalizadas_desde=${corteFinalizadas()}`, { headers: authHeaders() });
     if (tratarNaoAutorizado(res)) return;
@@ -4951,7 +5487,8 @@ function atualizarHeaderTarefas() {
    A ordem dentro de cada bloco já vem pronta do backend (prazo, depois
    título); aqui só se separa atrasadas de pendentes e se recolhe o
    histórico recente. */
-/* ── Ordem de leitura da lista (decisão de 14/09/2026) ──
+/* ── Ordem de leitura da lista (decisão de 14/09/2026, revista em 07/10/2026:
+   ver `compararTarefas` — prazo agora vem antes da prioridade) ──
    Alta → Média → Baixa → sem prioridade. "Sem prioridade" vai para o fim por
    escolha explícita: aqui ela significa "ainda não classifiquei", e o que não
    foi classificado não disputa espaço com o que foi.
@@ -4966,13 +5503,22 @@ const PESO_PRIORIDADE = { ALTA: 1, MEDIA: 2, BAIXA: 3 };
 const SEM_PRIORIDADE = 4;
 const SEM_PRAZO = '9999-12-31';  // ordena por último sem virar caso especial
 
+/* Revisto em 07/10/2026, a pedido do responsável: tarefa COM PRAZO vem antes
+   de tarefa sem prazo, dentro de cada grupo (e de cada seção). Entre as que
+   têm prazo, o prazo mais próximo primeiro, e a prioridade só desempata;
+   entre as sem prazo, continua valendo a prioridade (Alta → Média → Baixa →
+   sem). Antes a prioridade vinha primeiro, e uma tarefa "Alta" sem data
+   ficava acima de uma que vence amanhã. */
 function compararTarefas(a, b) {
-  const peso = (PESO_PRIORIDADE[a.prioridade] || SEM_PRIORIDADE)
-             - (PESO_PRIORIDADE[b.prioridade] || SEM_PRIORIDADE);
-  if (peso) return peso;
+  const temPrazoA = a.prazo ? 0 : 1;
+  const temPrazoB = b.prazo ? 0 : 1;
+  if (temPrazoA !== temPrazoB) return temPrazoA - temPrazoB;
   const prazoA = a.prazo || SEM_PRAZO;
   const prazoB = b.prazo || SEM_PRAZO;
   if (prazoA !== prazoB) return prazoA < prazoB ? -1 : 1;  // ISO compara como texto
+  const peso = (PESO_PRIORIDADE[a.prioridade] || SEM_PRIORIDADE)
+             - (PESO_PRIORIDADE[b.prioridade] || SEM_PRIORIDADE);
+  if (peso) return peso;
   return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR');
 }
 
@@ -4980,22 +5526,68 @@ function ordenadas(lista) {
   return [...lista].sort(compararTarefas);   // cópia: `tarefasCache` não é reordenado
 }
 
+/* ── O que está aberto ou recolhido na lista (07/10/2026) ──
+   Antes, todo redesenho reabria tudo: concluir uma tarefa com os grupos
+   minimizados devolvia a lista inteira aberta. Agora cada render lê do DOM
+   atual o que estava fechado — grupos, "Suas tarefas", subtarefas, Agendadas
+   e Concluídas — e reaplica depois. Continua sendo estado de SESSÃO: nada vai
+   para o localStorage, e recarregar a página traz tudo aberto como sempre. */
+function capturarVistaTarefas() {
+  const el = document.getElementById('tarefas-list');
+  if (!el || !el.querySelector('details, .tarefa-item')) return null;
+  return {
+    gruposFechados: new Set([...el.querySelectorAll('details[data-grupo]:not([open])')].map(d => d.dataset.grupo)),
+    secoes: Object.fromEntries([...el.querySelectorAll('details[data-secao]')].map(d => [d.dataset.secao, d.open])),
+    subsRecolhidas: new Set([...el.querySelectorAll('.tarefa-item.subs-recolhidas')].map(i => i.dataset.id)),
+  };
+}
+
+function restaurarVistaTarefas(vista, buscando) {
+  if (!vista) return;
+  const el = document.getElementById('tarefas-list');
+  el.querySelectorAll('details[data-grupo]').forEach(d => {
+    if (vista.gruposFechados.has(d.dataset.grupo)) d.open = false;
+  });
+  // Na busca, Agendadas abre sozinha para mostrar o resultado — não fecha de volta.
+  if (!buscando) {
+    el.querySelectorAll('details[data-secao]').forEach(d => {
+      if (d.dataset.secao in vista.secoes) d.open = vista.secoes[d.dataset.secao];
+    });
+  }
+  el.querySelectorAll('.tarefa-item[data-id]').forEach(item => {
+    if (vista.subsRecolhidas.has(item.dataset.id)) toggleSubtarefas(item.firstElementChild);
+  });
+}
+
 function renderTarefas() {
   const el = document.getElementById('tarefas-list');
+  const vista = capturarVistaTarefas();
 
   if (!tarefasCache.length) {
     el.innerHTML = `<div class="empty"><span class="icon">✅</span>Nenhuma tarefa em aberto.</div>`;
     return;
   }
 
-  const atrasadas = tarefasCache.filter(tarefaAtrasada);
-  const agendadas = tarefasCache.filter(t => t.agendada);
-  const pendentes = tarefasCache.filter(
+  // Com busca ativa, as seções são montadas só com o que casa — mesma
+  // estrutura de sempre, só que menor. O badge do cabeçalho continua contando
+  // tudo (`contarPendentes` lê `tarefasCache`, não esta lista).
+  const buscando = buscaTarefas.length > 0;
+  const base = buscando ? tarefasCache.filter(t => tarefaCasaBusca(t, buscaTarefas)) : tarefasCache;
+  if (buscando && !base.length) {
+    el.innerHTML = `<div class="empty"><span class="icon">🔍</span>Nenhuma tarefa encontrada.</div>`;
+    return;
+  }
+
+  const atrasadas = base.filter(tarefaAtrasada);
+  const agendadas = base.filter(t => t.agendada);
+  const pendentes = base.filter(
     t => t.status === 'PENDENTE' && !t.agendada && !tarefaAtrasada(t)
   );
-  const finalizadas = tarefasCache.filter(t => t.status !== 'PENDENTE');
+  const finalizadas = base.filter(t => t.status !== 'PENDENTE');
 
-  let html = '';
+  let html = buscando
+    ? `<p class="tarefas-busca-info">${base.length} resultado${base.length > 1 ? 's' : ''}</p>`
+    : '';
   if (atrasadas.length) {
     html += `<div class="tarefa-grupo">
       <p class="tarefa-grupo-titulo alerta">Atrasadas</p>
@@ -5012,15 +5604,17 @@ function renderTarefas() {
     // estado de quem ainda não classificou (RN-33). Os grupos vêm depois, cada
     // um dentro de uma borda.
     const semGrupo = pendentes.filter(t => !t.grupo);
-    const comGrupo = [...new Set(pendentes.filter(t => t.grupo).map(t => t.grupo))].sort()
+    // Ordem dos grupos: a escolhida neste aparelho, e alfabética para o resto
+    // (`ordenarGrupos`, 26/09/2026).
+    const comGrupo = ordenarGrupos([...new Set(pendentes.filter(t => t.grupo).map(t => t.grupo))])
       .map(g => [g, pendentes.filter(t => t.grupo === g)]);
 
     // <details> em vez de <div>: quem abre/fecha é o rótulo "Suas tarefas"
     // no cabeçalho (toggleSemGrupoTarefas), não algo dentro desta seção —
     // por isso o <summary> vem escondido (ver CSS #tarefas-sem-grupo).
-    // Sempre aberto de novo a cada render — estado de sessão, de propósito,
-    // mesma convenção do recolher de subtarefas.
-    html += `<details class="tarefa-grupo" id="tarefas-sem-grupo" open>
+    // Nasce aberto; se estava fechado antes do redesenho, `restaurarVistaTarefas`
+    // fecha de novo (07/10/2026). Estado de sessão, nunca gravado.
+    html += `<details class="tarefa-grupo" id="tarefas-sem-grupo" data-grupo="__sem_grupo__" open>
       <summary></summary>
       ${atrasadas.length && semGrupo.length ? '<p class="tarefa-grupo-titulo">Em aberto</p>' : ''}
       ${ordenadas(semGrupo).map(x => tarefaRowHtml(x)).join('')}
@@ -5035,19 +5629,21 @@ function renderTarefas() {
     // — aberto por padrão, e o botão discreto "Grupos" no cabeçalho fecha
     // todos de uma vez (toggleTodosGruposTarefas).
     html += comGrupo.map(([g, itens]) => `
-      <details class="tarefa-caixa-grupo" open>
+      <details class="tarefa-caixa-grupo" data-grupo="${escHtml(g)}" open>
         <summary class="tarefa-grupo-titulo">${escHtml(g)}</summary>
         ${ordenadas(itens).map(x => tarefaRowHtml(x, false)).join('')}
       </details>`).join('');
   }
-  if (!atrasadas.length && !pendentes.length) {
+  if (!atrasadas.length && !pendentes.length && !buscando) {
     html += `<div class="empty"><span class="icon">✅</span>Nada em aberto. 👌</div>`;
   }
   // Recorrentes que ainda não chegaram na janela (RN-32): recolhidas, mas
   // alcançáveis. Sumir de vez deixaria a série sem como ser editada nem
   // encerrada durante todo o intervalo.
   if (agendadas.length) {
-    html += `<details class="tarefa-grupo tarefa-recolhivel">
+    // Recolhida por padrão; aberta quando é resultado de busca, senão o que
+    // foi encontrado ficaria escondido atrás de mais um toque.
+    html += `<details class="tarefa-grupo tarefa-recolhivel" data-secao="agendadas" ${buscando ? 'open' : ''}>
       <summary>Agendadas (${agendadas.length})</summary>
       ${ordenadas(agendadas).map(x => tarefaRowHtml(x)).join('')}
     </details>`;
@@ -5055,12 +5651,13 @@ function renderTarefas() {
   if (finalizadas.length) {
     // Aberta por padrão: ver o que se fez nos últimos dias é metade do valor
     // de uma lista de tarefas, e uma seção fechada some da vista.
-    html += `<details class="tarefa-grupo tarefa-recolhivel" open>
+    html += `<details class="tarefa-grupo tarefa-recolhivel" data-secao="concluidas" open>
       <summary>Concluídas nos últimos ${JANELA_FINALIZADAS_DIAS} dias (${finalizadas.length})</summary>
       ${finalizadas.map(x => tarefaRowHtml(x)).join('')}
     </details>`;
   }
   el.innerHTML = html;
+  restaurarVistaTarefas(vista, buscando);
   atualizarSetaSemGrupoTarefas();
   atualizarSetaGruposTarefas();
 }
@@ -5170,7 +5767,7 @@ function tarefaRowHtml(t, comChip = true) {
          aria-expanded="true" aria-label="Recolher subtarefas de ${escHtml(t.titulo)}"`
     : ' class="tarefa-info"';
 
-  return `<div class="tarefa-item">
+  return `<div class="tarefa-item" data-id="${t.id}">
     <div class="${classes.join(' ')}">
       ${marca}
       <div${infoClicavel}>
@@ -5184,8 +5781,9 @@ function tarefaRowHtml(t, comChip = true) {
   </div>`;
 }
 
-/* Recolher é estado de sessão, e de propósito: nada é guardado, e qualquer
-   ação que redesenhe a lista (concluir, criar, editar) traz tudo aberto de
+/* Recolher é estado de sessão, e de propósito: nada é guardado. Desde
+   07/10/2026 ele sobrevive aos redesenhos da lista (concluir, criar, editar —
+   ver `capturarVistaTarefas`), mas recarregar a página traz tudo aberto de
    novo. Guardar por tarefa significaria uma chave no localStorage por id, que
    sobrevive à tarefa e nunca é limpa — preço alto para uma conveniência que
    dura um toque.
@@ -5257,7 +5855,7 @@ async function mudarStatusTarefa(id, status, mensagem) {
     // Recarrega em vez de remendar o cache: concluir uma recorrente CRIA uma
     // linha nova, e reabrir APAGA uma — em nenhum dos dois casos a resposta
     // sozinha diz como a lista ficou.
-    await carregarTarefas();
+    await carregarTarefas({ silencioso: true });
     notificarEscrita();
   } catch {
     toast('Erro ao atualizar a tarefa');
@@ -5342,7 +5940,7 @@ async function excluirTarefa(id) {
     if (tratarNaoAutorizado(res)) return;
     if (!res.ok && res.status !== 204) throw new Error();
     toast('Excluída');
-    await carregarTarefas();
+    await carregarTarefas({ silencioso: true });
   } catch {
     toast('Erro ao excluir');
   }
@@ -5445,7 +6043,7 @@ document.getElementById('tarefa-form').addEventListener('submit', async e => {
     if (editando) {
       // Edição pode reordenar grupo/prazo/prioridade de formas variadas —
       // mais simples e seguro recarregar do que tentar remendar o cache.
-      await carregarTarefas();
+      await carregarTarefas({ silencioso: true });
     } else {
       // Criação (item 3 do pedido de 19/09/2026): o POST já devolve a tarefa
       // completa, então um GET novo só repetiria o que já se tem. Insere
@@ -5496,7 +6094,7 @@ document.getElementById('subtarefa-form').addEventListener('submit', async e => 
       return;
     }
     fecharModalSubtarefa();
-    await carregarTarefas();
+    await carregarTarefas({ silencioso: true });
   } catch {
     toast('Erro ao adicionar a subtarefa');
   }

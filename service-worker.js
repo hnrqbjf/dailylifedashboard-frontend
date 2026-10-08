@@ -32,11 +32,23 @@
 // cabeçalho do card Tasks minimizado no celular, sem passar pelo modal
 // expandido; criar uma tarefa nova não dispara mais um GET — insere a
 // resposta do POST direto no cache local.
+// v15 (26/09/2026): Tasks ganha lupa de busca (filtra só o que já carregou)
+// e ordem dos grupos escolhida pelo usuário, salva neste aparelho; chip de
+// DÉBITO AUTOMÁTICO desce para a linha de baixo quando não cabe ao lado do
+// nome (sobrepunha o título da conta atrasada no celular). Ainda no v15
+// (07/10/2026, nada disso tinha ido ao ar): tarefa com prazo no topo do grupo,
+// e concluir/criar/editar não pisca mais a lista nem reabre o que estava fechado.
+// Também no v15 (08/10/2026): o Radar de notícias (news/) e o card de atalho
+// para ele. Os três arquivos do Radar entram no shell — e a regra de sempre
+// passa a valer para eles: mudou news/*, sobe o CACHE_NAME. Ainda antes do
+// deploy, o Radar ganhou o "há X min" ao lado do Atualizar e a trava de 5 min,
+// e as Configurações ganharam "Módulos na tela" (escolher o que aparece, salvo
+// neste aparelho — context/Modulo_Dashboard.md, F7).
 // v8 (14/09/2026): água 480→450 e "Outro valor" como botão, tarefas ordenadas
 // por prioridade com subtarefas recolhíveis, remédios tomados em bloco
 // resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
 // versões chegou a ir para produção separada.
-const CACHE_NAME = 'dld-shell-v14';
+const CACHE_NAME = 'dld-shell-v15';
 // v6: módulo de Agenda implementado (o card deixa de ser "em breve").
 // v5: módulo de Tasks implementado.
 //
@@ -67,6 +79,10 @@ const SHELL_FILES = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
+  './news/',
+  './news/index.html',
+  './news/radar.css',
+  './news/radar.js',
 ];
 
 self.addEventListener('install', event => {
