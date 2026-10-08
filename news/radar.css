@@ -21,7 +21,6 @@
   --font: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
   --bar-h: 56px;
   --tab-h: 64px;
-  --press-ms: 800ms;
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 /* Escuro: segue o aparelho, a menos que o tema tenha sido forçado no DLD
@@ -97,6 +96,16 @@ button { font: inherit; color: inherit; }
   background: linear-gradient(transparent 62%, var(--marker) 62%, var(--marker) 92%, transparent 92%);
   padding: 0 2px;
 }
+/* Tema claro/escuro, colado ao nome (o resto dos controles fica à direita). */
+.tema {
+  flex: none; display: inline-grid; place-items: center;
+  width: 34px; height: 34px; margin-left: -4px; padding: 0;
+  border: 0; border-radius: 9px; background: none; cursor: pointer; color: var(--ink-2);
+}
+.tema:hover { background: var(--surface); color: var(--ink); }
+.tema .tema__sol { display: none; }
+.tema.is-escuro .tema__sol { display: block; }
+.tema.is-escuro .tema__lua { display: none; }
 .seg {
   display: inline-flex; margin-left: auto;
   background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 3px;
@@ -116,6 +125,7 @@ button { font: inherit; color: inherit; }
 }
 .refresh__label { display: none; font-size: 14px; font-weight: 600; }
 /* Tempo desde a última busca, colado ao botão (atualiza sozinho, sem recarregar). */
+.atualizar { flex: none; position: relative; display: flex; align-items: center; gap: 12px; }
 .idade {
   flex: none; margin-right: -4px;
   font-size: 12px; line-height: 1.15; color: var(--ink-3); text-align: right;
@@ -126,20 +136,29 @@ button { font: inherit; color: inherit; }
 .idade.is-busy time { color: var(--ink-3); font-weight: 400; }
 .idade.is-busy .idade__pre { display: none !important; }
 /* Celular: o "há 47 min" precisa caber na mesma linha do logo e do Hoje/Semana. */
+/* No celular não cabe "há 47 min" ao lado do botão junto com o tema: o tempo
+   vira uma legenda pequena DENTRO do botão, embaixo do ícone. */
 @media (max-width: 419px) {
   .bar__in { gap: 8px; padding: 0 12px; }
   .logo { font-size: 22px; }
-  .seg__btn { padding: 6px 9px; }
-  .refresh { min-width: 38px; height: 38px; padding: 0 8px; }
-  .idade { font-size: 11.5px; margin-right: 0; }
+  .tema { width: 30px; }
+  .seg__btn { padding: 6px 8px; }
+  .refresh { min-width: 46px; height: 42px; padding: 0 4px 11px; }
+  .refresh svg { width: 18px; height: 18px; }
+  .idade {
+    position: absolute; left: 0; right: 0; bottom: 4px; z-index: 1; pointer-events: none;
+    margin: 0; text-align: center; font-size: 9.5px; line-height: 1; letter-spacing: .01em;
+  }
+  .idade time { font-weight: 600; }
+  .idade.is-busy { visibility: hidden; }
 }
-@media (max-width: 379px) { .idade__ha { display: none; } }
+.idade__ha { display: none; }
+@media (min-width: 420px) { .idade__ha { display: inline; } }
 @media (max-width: 339px) {
   .bar__in { gap: 5px; padding: 0 10px; }
   .logo { font-size: 19px; }
   .seg__btn { padding: 6px 6px; font-size: 13px; }
-  .refresh { min-width: 34px; height: 34px; padding: 0 6px; }
-  .idade { font-size: 11px; }
+  .tema { width: 28px; }
 }
 .refresh.is-busy svg { animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -222,8 +241,11 @@ body[data-view="trends"] .view--trends { display: block; }
   position: absolute; inset: 6px -8px; z-index: -1; border-radius: 10px;
   background: var(--marker-soft);
   transform: scaleX(0); transform-origin: left center;
+  transition: transform .22s ease;          /* recolhe ao soltar antes da hora */
 }
-.story.is-pressing .story__sweep { transform: scaleX(1); transition: transform var(--press-ms) linear; }
+/* Durante a carga, quem move o fundo é o radar.js, quadro a quadro, junto com
+   a barra de partículas (canvas .carga) — sem transição aqui. */
+.story.is-pressing .story__sweep, .read-item.is-pressing .story__sweep { transition: none; }
 .story.is-done .story__sweep { transform: scaleX(1); background: var(--marker); opacity: .7; }
 
 .story__rank {
@@ -309,7 +331,10 @@ body[data-view="trends"] .view--trends { display: block; }
   .story:hover .story__check, .story:focus-within .story__check { display: inline-block; }
 }
 
-.story.is-leaving { transition: opacity .2s ease, height .28s ease .12s, padding .28s ease .12s; opacity: 0; overflow: hidden; }
+/* Barra de carga do toque longo: um canvas fixo por cima da notícia
+   (radar.js, criarCarga) — fixo para a explosão final sobreviver à linha
+   que se recolhe. Não intercepta toque nenhum. */
+.carga { position: fixed; z-index: 30; pointer-events: none; }
 
 /* ---------- lidos ---------- */
 .read-group { margin: 18px 0 4px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
@@ -320,7 +345,6 @@ body[data-view="trends"] .view--trends { display: block; }
   touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
 .read-item .story__sweep { inset: 4px -8px; }
-.read-item.is-pressing .story__sweep { transform: scaleX(1); transition: transform var(--press-ms) linear; }
 .read-item__title { font-weight: 600; font-stretch: 92%; font-size: 15.5px; line-height: 1.3; }
 .read-item__meta { grid-column: 1; font-size: 13px; color: var(--ink-3); display: flex; gap: 12px; flex-wrap: wrap; }
 .read-item .link-btn { grid-row: 1 / span 2; grid-column: 2; font-size: 13px; }
@@ -457,10 +481,10 @@ body[data-view="trends"] .view--trends { display: block; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .story.is-pressing .story__sweep, .read-item.is-pressing .story__sweep { transition: none; transform: scaleX(1); opacity: .5; }
+  .story.is-pressing .story__sweep, .read-item.is-pressing .story__sweep { opacity: .5; }
   .refresh.is-busy svg { animation: none; }
   .skel::after { animation: none; }
-  .story.is-leaving { transition: none; }
+  .scan__now mark { animation: none; }
 }
 
 
@@ -540,7 +564,11 @@ body[data-view="trends"] .view--trends { display: block; }
   margin: 8px 0 0; min-height: 1.45em; font-size: 15px; color: var(--ink-2);
   font-weight: 600;
 }
-.scan__now mark { background: var(--marker); color: #18202E; padding: 1px 6px; border-radius: 4px; }
+.scan__now mark {
+  background: var(--marker); color: #18202E; padding: 1px 6px; border-radius: 4px;
+  display: inline-block; animation: nome-entra .38s ease both;
+}
+@keyframes nome-entra { from { opacity: 0; transform: translateY(4px); } }
 .scan__time { margin: 2px 0 0; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 @media (min-width: 960px) {
   .scan { padding: 44px 0 56px; gap: 26px; }

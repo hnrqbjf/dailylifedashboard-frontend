@@ -3,11 +3,15 @@
    pedida, com a varredura animada no lugar do "aguarde". */
 const API = window.API_BASE || "";
 const TOKEN_KEY = "dld_sessao_token";        // o MESMO do DLD: uma sessão vale nos dois
-const VOLTA_MS = 2600;                        // uma volta do feixe da varredura
+const VOLTA_MS = 4200;                        // uma volta do feixe da varredura (era 2,6 s: frenético)
+const NOME_MS = 750;                          // um nome de veículo fica pelo menos isso na tela
 const RESULTADO_MS = 1800;                    // quanto o resultado da varredura fica na tela
 const INTERVALO_MS = 5 * 60 * 1000;            // RN-08: espera mínima entre duas buscas (o servidor também confere)
 const IDADE_TICK_MS = 15 * 1000;               // de quanto em quanto tempo o "há X min" é recalculado
-const LONG_PRESS_MS = 800;          // quanto tempo segurar para marcar como lida
+const ARMAR_MS = 240;               // segurar PARADO antes de qualquer efeito: rolar a lista nunca acende nada
+const CARGA_MS = 760;               // depois disso, a barra enche; soltar antes cancela
+const LONG_PRESS_MS = ARMAR_MS + CARGA_MS;   // total para marcar como lida (1 s)
+const EASE = "cubic-bezier(.2, .8, .2, 1)";
 const READ_KEY = "radar.read.v1";   // lidos ficam só neste navegador (localStorage)
 const PREFS_KEY = "radar.prefs.v1";
 const HINT_KEY = "radar.hint.v1";
@@ -147,13 +151,148 @@ function toast(text, actionLabel, onAction) {
   toastTimer = setTimeout(() => (t.hidden = true), actionLabel ? 5000 : 2500);
 }
 
-/* ---------------- toque longo ---------------- */
+/* ---------------- toque longo ----------------
+   Duas fases. Primeiro ARMAR_MS segurando parado, sem efeito nenhum — no
+   celular, um dedo que começa a rolar a lista sempre se mexe (ou o navegador
+   manda pointercancel) antes disso, então rolar nunca acende a barra. Só
+   depois começa a carga: uma barra de luz no pé da notícia, soltando
+   partículas, que enche em CARGA_MS. Soltar antes cancela. */
+function corVar(nome, reserva) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+  return v || reserva;
+}
+
+// A carga é desenhada num canvas FIXO por cima da linha (não dentro dela):
+// assim a explosão final continua visível enquanto a linha se recolhe.
+function criarCarga(row) {
+  const sweep = row.querySelector(".story__sweep");
+  const reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduz) {
+    if (sweep) sweep.style.transform = "scaleX(1)";
+    return { concluir() {}, cancelar() { if (sweep) sweep.style.transform = ""; } };
+  }
+  const PAD = 28;
+  const r0 = row.getBoundingClientRect();
+  // Só a parte VISÍVEL da notícia: na manchete (alta, com imagem) o pé da
+  // linha costuma estar fora da tela, e a barra precisa aparecer.
+  // (descontando a barra do topo e a de abas do celular, que ficam por cima)
+  const barra = $(".bar").getBoundingClientRect().bottom;
+  const abas = $(".tabbar");
+  const chao = abas && getComputedStyle(abas).display !== "none" ? abas.getBoundingClientRect().top : window.innerHeight;
+  const topo = Math.max(r0.top, barra), base = Math.min(r0.bottom, chao - 10);
+  const r = { left: r0.left, top: topo, width: r0.width, height: Math.max(40, base - topo) };
+  const cv = document.createElement("canvas");
+  cv.className = "carga";
+  cv.setAttribute("aria-hidden", "true");
+  const w = r.width + 16 + PAD * 2, h = r.height + PAD * 2;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  Object.assign(cv.style, { left: `${r.left - 8 - PAD}px`, top: `${r.top - PAD}px`, width: `${w}px`, height: `${h}px` });
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  document.body.append(cv);
+  const ctx = cv.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const azul = corVar("--cobalt", "#2F5BEA"), amarelo = corVar("--marker", "#FFE14D"), trilho = corVar("--rule", "#DCE1E8");
+  const x0 = PAD + 8, x1 = w - PAD - 8, y = h - PAD - 3;   // a barra corre no pé da linha
+  const parts = [];
+  let inicio = performance.now(), anterior = inicio, p = 0, estado = "carregando", fimEm = 0, raf = 0;
+
+  const emitir = (x, n, explosao) => {
+    for (let i = 0; i < n; i++) {
+      const ang = explosao ? Math.random() * Math.PI * 2 : Math.PI + (Math.random() - 0.5) * 1.1 - 0.35;
+      const vel = explosao ? 0.6 + Math.random() * 2.8 : 0.35 + Math.random() * 1.3;
+      parts.push({
+        x: x + (Math.random() - 0.5) * 4, y: y + (Math.random() - 0.5) * 3,
+        vx: Math.cos(ang) * vel, vy: Math.sin(ang) * vel - (explosao ? 0.4 : 0.35),
+        vida: 0, max: (explosao ? 520 : 360) + Math.random() * 520,
+        r: 0.7 + Math.random() * (explosao ? 2 : 1.4),
+        cor: Math.random() < 0.6 ? amarelo : azul,
+        traco: Math.random() < 0.35,
+      });
+    }
+  };
+
+  const quadro = (t) => {
+    const dt = Math.min(48, t - anterior); anterior = t;
+    ctx.clearRect(0, 0, w, h);
+    if (estado === "carregando") {
+      p = Math.min(1, (t - inicio) / CARGA_MS);
+      if (sweep) sweep.style.transform = `scaleX(${p})`;
+    }
+    const xc = x0 + (x1 - x0) * p;
+    // trilho e marcas de régua (acendem quando a carga passa por elas)
+    const apagar = estado === "cancelada" ? Math.max(0, 1 - (t - fimEm) / 220) : estado === "concluida" ? Math.max(0, 1 - (t - fimEm) / 520) : 1;
+    if (apagar > 0) {
+      ctx.globalAlpha = apagar;
+      ctx.fillStyle = trilho;
+      ctx.fillRect(x0, y - 0.5, x1 - x0, 1);
+      for (let x = x0; x <= x1; x += 22) {
+        ctx.fillStyle = x <= xc ? amarelo : trilho;
+        ctx.fillRect(x, y - 3, 1, x <= xc ? 6 : 3);
+      }
+      // barra cheia, com brilho
+      const g = ctx.createLinearGradient(x0, 0, Math.max(x0 + 1, xc), 0);
+      g.addColorStop(0, azul); g.addColorStop(1, amarelo);
+      ctx.save();
+      ctx.shadowColor = amarelo; ctx.shadowBlur = 12;
+      ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(xc, y); ctx.stroke();
+      // cabeça da carga: ponto aceso e um feixe vertical que sobe e some
+      if (estado !== "cancelada") {
+        const fe = ctx.createLinearGradient(0, y, 0, y - 46);
+        fe.addColorStop(0, amarelo); fe.addColorStop(1, "transparent");
+        ctx.fillStyle = fe; ctx.globalAlpha = apagar * 0.55;
+        ctx.fillRect(xc - 0.75, y - 46, 1.5, 46);
+        ctx.globalAlpha = apagar;
+        ctx.fillStyle = amarelo;
+        ctx.beginPath(); ctx.arc(xc, y, 3.4, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+    if (estado === "carregando") emitir(xc, 2, false);
+
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const q = parts[i];
+      q.vida += dt;
+      if (q.vida >= q.max) { parts.splice(i, 1); continue; }
+      const k = dt / 16;
+      q.x += q.vx * k; q.y += q.vy * k;
+      q.vx *= 0.985; q.vy = q.vy * 0.985 - 0.006 * k;   // flutuam para cima, perdendo força
+      ctx.globalAlpha = 1 - q.vida / q.max;
+      ctx.fillStyle = q.cor;
+      if (q.traco) ctx.fillRect(q.x, q.y, q.r * 3.2, 1);
+      else ctx.fillRect(q.x - q.r / 2, q.y - q.r / 2, q.r, q.r);
+    }
+    ctx.globalAlpha = 1;
+
+    if (estado !== "carregando" && !parts.length && apagar === 0) { cv.remove(); return; }
+    raf = requestAnimationFrame(quadro);
+  };
+  raf = requestAnimationFrame(quadro);
+
+  return {
+    concluir() {
+      if (estado !== "carregando") return;
+      estado = "concluida"; p = 1; fimEm = performance.now();
+      if (sweep) sweep.style.transform = "scaleX(1)";
+      emitir(x1, 46, true);
+    },
+    cancelar() {
+      if (estado !== "carregando") return;
+      estado = "cancelada"; fimEm = performance.now();
+      if (sweep) sweep.style.transform = "";
+    },
+  };
+}
+
 function longPress(container, selector, onDone) {
-  let timer = null, row = null, x0 = 0, y0 = 0, fired = false;
+  let armar = null, carregar = null, row = null, carga = null, x0 = 0, y0 = 0, fired = false;
   const cancel = () => {
-    clearTimeout(timer); timer = null;
+    clearTimeout(armar); clearTimeout(carregar); armar = carregar = null;
+    if (carga) carga.cancelar();
     if (row) row.classList.remove("is-pressing");
-    row = null;
+    row = null; carga = null;
   };
   container.addEventListener("pointerdown", (e) => {
     fired = false;
@@ -161,20 +300,27 @@ function longPress(container, selector, onDone) {
     const target = e.target.closest(selector);
     if (!target || e.target.closest("[data-no-press]")) return;
     row = target; x0 = e.clientX; y0 = e.clientY;
-    row.classList.add("is-pressing");
-    timer = setTimeout(() => {
-      fired = true;
-      const done = row;
-      cancel();
-      if (navigator.vibrate) navigator.vibrate(20);
-      onDone(done);
-    }, LONG_PRESS_MS);
+    armar = setTimeout(() => {
+      armar = null;
+      row.classList.add("is-pressing");
+      carga = criarCarga(row);
+      carregar = setTimeout(() => {
+        fired = true;
+        const done = row, c = carga;
+        carga = null;          // para o cancel() abaixo não apagar a explosão
+        cancel();
+        c.concluir();
+        if (navigator.vibrate) navigator.vibrate(20);
+        onDone(done);
+      }, CARGA_MS);
+    }, ARMAR_MS);
   });
   container.addEventListener("pointermove", (e) => {
     if (row && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) cancel(); // virou rolagem
   });
   ["pointerup", "pointercancel"].forEach((ev) => document.addEventListener(ev, cancel));
   container.addEventListener("pointerleave", cancel);
+  window.addEventListener("scroll", () => { if (row) cancel(); }, { passive: true });
   // depois de um toque longo, o "clique" que vem em seguida não abre o link
   container.addEventListener("click", (e) => {
     if (fired) { e.preventDefault(); e.stopPropagation(); fired = false; }
@@ -256,7 +402,10 @@ function renderStory(s, i) {
   const check = el("button", "story__check", read ? "Desmarcar" : "Marcar como lida");
   check.type = "button";
   check.dataset.noPress = "";
-  check.addEventListener("click", () => toggleRead(row));
+  check.addEventListener("click", () => {
+    if (!isRead(s)) { const c = criarCarga(row); c.concluir(); }
+    toggleRead(row);
+  });
   row.append(check);
   return row;
 }
@@ -310,6 +459,69 @@ function skeleton() {
   list.replaceChildren(...Array.from({ length: 6 }, () => el("div", "skel")));
 }
 
+/* ---------------- transição ao marcar como lida ----------------
+   1) a linha pisca em amarelo e se recolhe (as de baixo sobem junto, sem
+      salto); 2) a lista é redesenhada e, se a que saiu era a manchete, a
+      próxima vira manchete com a imagem se abrindo de cima para baixo e o
+      título crescendo até o tamanho de manchete — em vez de a imagem grande
+      aparecer de uma vez. */
+const reduzMovimento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function sairDaLista(row, depois) {
+  row.classList.add("is-done");
+  if (reduzMovimento()) return depois();
+  const h = row.getBoundingClientRect().height;
+  const cs = getComputedStyle(row);
+  row.style.overflow = "hidden";
+  const a = row.animate([
+    { height: `${h}px`, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1, offset: 0 },
+    { height: `${h}px`, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1, offset: 0.3 },
+    { height: "0px", paddingTop: "0px", paddingBottom: "0px", opacity: 0 },
+  ], { duration: 520, easing: EASE, fill: "forwards" });
+  a.onfinish = depois;
+}
+
+function renderNewsAnimado() {
+  if (reduzMovimento()) return renderNews();
+  const antes = new Map();
+  $$("#stories .story").forEach((r) => {
+    const t = r.querySelector(".story__title");
+    antes.set(r.dataset.id, { lead: r.classList.contains("story--lead"), fs: t ? parseFloat(getComputedStyle(t).fontSize) : 0 });
+  });
+  renderNews();
+  const lead = $("#stories .story--lead");
+  const a = lead && antes.get(lead.dataset.id);
+  if (a && !a.lead) promoverManchete(lead, a.fs);
+}
+
+function promoverManchete(row, fsAntes) {
+  const D = 640;
+  const img = row.querySelector(".story__thumb");
+  if (img && img.complete && img.naturalWidth) {
+    const cs = getComputedStyle(img);
+    const H = img.getBoundingClientRect().height;
+    img.animate([
+      { height: "0px", marginBottom: "0px", opacity: 0, clipPath: "inset(0 0 100% 0 round 14px)" },
+      { height: `${H}px`, marginBottom: cs.marginBottom, opacity: 1, clipPath: "inset(0 0 0% 0 round 14px)" },
+    ], { duration: D, easing: EASE });
+  } else if (img) {
+    img.animate([{ opacity: 0 }, { opacity: 1 }], { duration: D, easing: "ease" });
+  }
+  const t = row.querySelector(".story__title");
+  if (t && fsAntes) {
+    t.animate([{ fontSize: `${fsAntes}px` }, { fontSize: getComputedStyle(t).fontSize }], { duration: D, easing: EASE });
+  }
+  const resumo = row.querySelector(".story__summary");
+  if (resumo) resumo.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: D, easing: "ease" });
+  // um brilho amarelo que atravessa a nova manchete: "subiu para o topo"
+  const sweep = row.querySelector(".story__sweep");
+  if (sweep) sweep.animate([
+    { transform: "scaleX(0)", opacity: 0.9, transformOrigin: "left center" },
+    { transform: "scaleX(1)", opacity: 0.6, transformOrigin: "left center", offset: 0.5 },
+    { transform: "scaleX(1)", opacity: 0, transformOrigin: "left center" },
+  ], { duration: 900, easing: EASE });
+}
+
 function toggleRead(row) {
   const s = state.stories.find((x) => x.id === row.dataset.id);
   if (!s) return;
@@ -322,19 +534,8 @@ function toggleRead(row) {
   markRead(s);
   const undo = () => { unmarkLinks(storyLinks(s)); renderNews(); renderRead(); };
   renderRead();
-  if (state.category === "all") {
-    // sai da lista com uma animação curta
-    row.classList.add("is-done");
-    row.style.height = row.offsetHeight + "px";
-    requestAnimationFrame(() => {
-      row.classList.add("is-leaving");
-      row.style.height = "0px"; row.style.paddingTop = "0"; row.style.paddingBottom = "0";
-    });
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setTimeout(renderNews, reduce ? 0 : 420);
-  } else {
-    renderNews();
-  }
+  if (state.category === "all") sairDaLista(row, renderNewsAnimado);
+  else renderNews();
   toast("Marcada como lida", "Desfazer", undo);
 }
 
@@ -525,12 +726,17 @@ function iniciarVarredura() {
   varredura.inicio = performance.now();
   varredura.ultimo = 0;
 
+  // O ponto acende sempre que o feixe passa; o NOME embaixo troca no máximo
+  // a cada NOME_MS (com 28 veículos numa volta, trocar a cada ponto era frenético).
+  let ultimoNome = -Infinity;
   const acender = (b) => {
     b.el.classList.remove("apagando");
     b.el.classList.add("lit");
-    setTimeout(() => b.el.classList.add("apagando"), 90);
-    const now = $("#scan-now");
-    now.replaceChildren(el("mark", null, b.nome));
+    setTimeout(() => b.el.classList.add("apagando"), 140);
+    const agora = performance.now();
+    if (agora - ultimoNome < NOME_MS) return;
+    ultimoNome = agora;
+    $("#scan-now").replaceChildren(el("mark", null, b.nome));
   };
 
   const relogio = () => {
@@ -541,7 +747,7 @@ function iniciarVarredura() {
 
   if (reduzido) {   // sem rotação: acende um veículo por vez, em ordem
     let i = 0;
-    varredura.passo = setInterval(() => acender(varredura.blips[i++ % varredura.blips.length]), 450);
+    varredura.passo = setInterval(() => acender(varredura.blips[i++ % varredura.blips.length]), NOME_MS);
     return;
   }
   const beam = $(".scan__beam");
@@ -588,6 +794,31 @@ async function mostrarResultado(resumo, feeds) {
   $("#scan-time").textContent = `em ${s} s`;
   await new Promise((r) => setTimeout(r, RESULTADO_MS));
 }
+
+/* ---------------- tema ----------------
+   O mesmo `dld_tema` do DLD: trocar aqui troca lá, e vice-versa. O DLD tem um
+   terceiro estado ("seguir o aparelho", sem chave salva); aqui o botão só
+   alterna claro/escuro, partindo do que está na tela. */
+const TEMA_KEY = "dld_tema";
+const temaEscuroAgora = () => {
+  const t = document.documentElement.getAttribute("data-theme");
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+};
+function sincronizarBotaoTema() {
+  const escuro = temaEscuroAgora();
+  const b = $("#tema");
+  b.classList.toggle("is-escuro", escuro);
+  b.setAttribute("aria-label", escuro ? "Usar tema claro" : "Usar tema escuro");
+  b.title = escuro ? "Tema claro" : "Tema escuro";
+}
+$("#tema").addEventListener("click", () => {
+  const novo = temaEscuroAgora() ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", novo);
+  try { localStorage.setItem(TEMA_KEY, novo); } catch { /* modo privado: vale até fechar */ }
+  sincronizarBotaoTema();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sincronizarBotaoTema);
+sincronizarBotaoTema();
 
 /* ---------------- tempo desde a última busca ---------------- */
 // Um relógio só, que recalcula o texto a cada 15 s e sempre que a aba volta a
@@ -753,5 +984,4 @@ async function iniciar() {
   await refreshAll();
 }
 
-document.documentElement.style.setProperty("--press-ms", LONG_PRESS_MS + "ms");
 if (token()) iniciar(); else { rebuildReadIndex(); syncControls(); mostrarLogin(""); }

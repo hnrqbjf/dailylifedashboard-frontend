@@ -2274,6 +2274,60 @@
 
   <div class="modulos-grid">
 
+  <!-- ═══════════════ Card: Tasks — o primeiro da grade (08/10/2026) ═══════════════ -->
+  <div class="card card-tasks" id="card-tasks">
+    <div class="card-header" role="button" tabindex="0" aria-expanded="false"
+         onclick="toggleCard('tasks')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('tasks');}">
+      <span class="card-icone">✅</span>
+      <span class="card-nome">Tasks</span>
+      <span class="card-sub" id="tarefas-header-badges"></span>
+      <button type="button" class="btn-icon-add btn-add-tarefa-minimizado" aria-label="Adicionar tarefa"
+              onclick="event.stopPropagation(); abrirModalTarefa();"
+              onkeydown="event.stopPropagation();">+</button>
+      <span class="chevron">▾</span>
+    </div>
+
+    <div class="card-body" id="tarefas-body">
+      <div class="list-header">
+        <!-- Sem navegação por período, diferente de Medicamentos e Contas:
+             uma tarefa sem prazo não pertence a dia nenhum (RN-04). Desde
+             17/09/2026 o rótulo também colapsa/expande as tarefas sem grupo
+             (a "caixa de entrada", ver RN-33) — mesmo texto, agora clicável. -->
+        <button type="button" class="date-label-btn" id="tarefas-sem-grupo-toggle"
+                onclick="toggleSemGrupoTarefas()" aria-expanded="true" aria-controls="tarefas-sem-grupo">
+          <span id="tarefas-sem-grupo-seta" aria-hidden="true">▾</span> Suas tarefas
+        </button>
+        <div class="tarefas-header-acoes">
+          <!-- Lupa e ordenar grupos (26/09/2026). A busca filtra só o que já
+               veio do servidor (tarefasCache) — nenhuma chamada nova. -->
+          <button type="button" class="btn-recolher-grupos btn-tarefas-icone" id="btn-busca-tarefas"
+                  onclick="toggleBuscaTarefas()" title="Buscar nas tarefas" aria-label="Buscar nas tarefas"
+                  aria-expanded="false" aria-controls="tarefas-busca">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                 stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+          </button>
+          <button type="button" class="btn-recolher-grupos btn-tarefas-icone" id="btn-ordem-grupos"
+                  onclick="abrirOrdemGrupos()" title="Ordenar grupos" aria-label="Ordenar grupos">⇅</button>
+          <button type="button" class="btn-recolher-grupos" id="btn-recolher-grupos"
+                  onclick="toggleTodosGruposTarefas()" title="Minimizar todos os grupos"
+                  aria-label="Minimizar todos os grupos">
+            <span id="tarefas-grupos-seta" aria-hidden="true">▾</span> Grupos
+          </button>
+          <button class="btn-icon-add" aria-label="Adicionar tarefa" onclick="abrirModalTarefa()">+</button>
+        </div>
+      </div>
+      <div class="tarefas-busca" id="tarefas-busca" role="search">
+        <input id="tarefas-busca-input" type="search" placeholder="Buscar tarefa, subtarefa ou grupo…"
+               autocomplete="off" enterkeyhint="search" aria-label="Buscar nas tarefas"
+               oninput="filtrarTarefas(this.value)"
+               onkeydown="if(event.key==='Escape'){event.preventDefault();fecharBuscaTarefas();}">
+        <button type="button" class="btn-close" aria-label="Fechar busca" onclick="fecharBuscaTarefas()">×</button>
+      </div>
+      <div id="tarefas-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
   <!-- ═══════════════ Card: Medicamentos ═══════════════ -->
   <div class="card" id="card-medicamentos">
     <div class="card-header" role="button" tabindex="0" aria-expanded="false"
@@ -2416,60 +2470,6 @@
         <button class="btn-icon-add" aria-label="Adicionar conta" onclick="abrirModalConta()">+</button>
       </div>
       <div id="contas-list"><div class="loading"><div class="spinner"></div></div></div>
-    </div>
-  </div>
-
-  <!-- ═══════════════ Card: Tasks — sempre sozinho, largura inteira ═══════════════ -->
-  <div class="card card-tasks" id="card-tasks">
-    <div class="card-header" role="button" tabindex="0" aria-expanded="false"
-         onclick="toggleCard('tasks')"
-         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('tasks');}">
-      <span class="card-icone">✅</span>
-      <span class="card-nome">Tasks</span>
-      <span class="card-sub" id="tarefas-header-badges"></span>
-      <button type="button" class="btn-icon-add btn-add-tarefa-minimizado" aria-label="Adicionar tarefa"
-              onclick="event.stopPropagation(); abrirModalTarefa();"
-              onkeydown="event.stopPropagation();">+</button>
-      <span class="chevron">▾</span>
-    </div>
-
-    <div class="card-body" id="tarefas-body">
-      <div class="list-header">
-        <!-- Sem navegação por período, diferente de Medicamentos e Contas:
-             uma tarefa sem prazo não pertence a dia nenhum (RN-04). Desde
-             17/09/2026 o rótulo também colapsa/expande as tarefas sem grupo
-             (a "caixa de entrada", ver RN-33) — mesmo texto, agora clicável. -->
-        <button type="button" class="date-label-btn" id="tarefas-sem-grupo-toggle"
-                onclick="toggleSemGrupoTarefas()" aria-expanded="true" aria-controls="tarefas-sem-grupo">
-          <span id="tarefas-sem-grupo-seta" aria-hidden="true">▾</span> Suas tarefas
-        </button>
-        <div class="tarefas-header-acoes">
-          <!-- Lupa e ordenar grupos (26/09/2026). A busca filtra só o que já
-               veio do servidor (tarefasCache) — nenhuma chamada nova. -->
-          <button type="button" class="btn-recolher-grupos btn-tarefas-icone" id="btn-busca-tarefas"
-                  onclick="toggleBuscaTarefas()" title="Buscar nas tarefas" aria-label="Buscar nas tarefas"
-                  aria-expanded="false" aria-controls="tarefas-busca">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-                 stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
-          </button>
-          <button type="button" class="btn-recolher-grupos btn-tarefas-icone" id="btn-ordem-grupos"
-                  onclick="abrirOrdemGrupos()" title="Ordenar grupos" aria-label="Ordenar grupos">⇅</button>
-          <button type="button" class="btn-recolher-grupos" id="btn-recolher-grupos"
-                  onclick="toggleTodosGruposTarefas()" title="Minimizar todos os grupos"
-                  aria-label="Minimizar todos os grupos">
-            <span id="tarefas-grupos-seta" aria-hidden="true">▾</span> Grupos
-          </button>
-          <button class="btn-icon-add" aria-label="Adicionar tarefa" onclick="abrirModalTarefa()">+</button>
-        </div>
-      </div>
-      <div class="tarefas-busca" id="tarefas-busca" role="search">
-        <input id="tarefas-busca-input" type="search" placeholder="Buscar tarefa, subtarefa ou grupo…"
-               autocomplete="off" enterkeyhint="search" aria-label="Buscar nas tarefas"
-               oninput="filtrarTarefas(this.value)"
-               onkeydown="if(event.key==='Escape'){event.preventDefault();fecharBuscaTarefas();}">
-        <button type="button" class="btn-close" aria-label="Fechar busca" onclick="fecharBuscaTarefas()">×</button>
-      </div>
-      <div id="tarefas-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 
@@ -3204,11 +3204,11 @@ function devolverResumoAoLugar() {
 const MODULOS_OCULTOS_STORAGE = 'dld_modulos_ocultos';
 const MODULOS_NA_TELA = [
   { id: 'resumo',       nome: 'Resumo do dia',   icone: '📊', el: 'painel-vazio', sub: 'O dashboard com um bloco por módulo' },
+  { id: 'tasks',        nome: 'Tasks',           icone: '✅', el: 'card-tasks' },
   { id: 'medicamentos', nome: 'Medicamentos',    icone: '💊', el: 'card-medicamentos' },
   { id: 'habitos',      nome: 'Hábitos',         icone: '🧩', el: 'card-habitos' },
   { id: 'agua',         nome: 'Consumo de água', icone: '💧', el: 'card-agua' },
   { id: 'contas',       nome: 'Contas a pagar',  icone: '🧾', el: 'card-contas' },
-  { id: 'tasks',        nome: 'Tasks',           icone: '✅', el: 'card-tasks' },
   { id: 'agenda',       nome: 'Agenda',          icone: '📅', el: 'card-agenda' },
   { id: 'radar',        nome: 'Radar',           icone: '📡', el: 'card-radar', sub: 'Atalho para as notícias' },
 ];
@@ -3414,7 +3414,10 @@ function renderResumoBlocos(dados) {
   const el = document.getElementById('resumo-blocos');
   // Módulo oculto também some do resumo: o bloco abriria um card que não está na tela.
   const ocultos = lerModulosOcultos();
-  const blocos = blocosDeResumo(dados).filter(b => !ocultos.has(b.modulo));
+  // Mesma ordem da grade (Tasks primeiro, desde 08/10/2026).
+  const ordem = MODULOS_NA_TELA.map(m => m.id);
+  const blocos = blocosDeResumo(dados).filter(b => !ocultos.has(b.modulo))
+    .sort((a, b) => ordem.indexOf(a.modulo) - ordem.indexOf(b.modulo));
 
   el.innerHTML = blocos.length
     ? blocos.map(b => `

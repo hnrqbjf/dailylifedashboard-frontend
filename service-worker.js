@@ -43,7 +43,9 @@
 // passa a valer para eles: mudou news/*, sobe o CACHE_NAME. Ainda antes do
 // deploy, o Radar ganhou o "há X min" ao lado do Atualizar e a trava de 5 min,
 // e as Configurações ganharam "Módulos na tela" (escolher o que aparece, salvo
-// neste aparelho — context/Modulo_Dashboard.md, F7).
+// neste aparelho — context/Modulo_Dashboard.md, F7). Tasks virou o primeiro
+// card; no Radar: botão de tema, nova animação ao marcar como lida e a
+// varredura mais lenta.
 // v8 (14/09/2026): água 480→450 e "Outro valor" como botão, tarefas ordenadas
 // por prioridade com subtarefas recolhíveis, remédios tomados em bloco
 // resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
