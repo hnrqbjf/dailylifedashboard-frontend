@@ -44,6 +44,7 @@
       <nav class="topnav" aria-label="Seções">
         <button class="topnav__btn" data-view="news" aria-current="page">Notícias</button>
         <button class="topnav__btn" data-view="read">Lidos <span class="badge" data-read-count></span></button>
+        <button class="topnav__btn" data-view="blocks">Bloqueios</button>
       </nav>
 
       <div class="atualizar">
@@ -73,7 +74,8 @@
     <section class="view view--news" id="view-news" aria-labelledby="news-heading">
       <div class="masthead">
         <h1 id="news-heading" class="masthead__date"></h1>
-        <p class="masthead__status"><span id="status-count"></span></p>
+        <p class="masthead__status"><span id="status-count"></span>
+          <button type="button" id="status-hidden" class="status-hidden" hidden></button></p>
       </div>
       <div id="hint" class="hint" hidden>
         <p>Segure uma notícia por um segundo para marcar como lida. Ela sai de Tudo e vai para Lidos.</p>
@@ -105,8 +107,35 @@
         <h1 id="read-heading" class="masthead__date">Lidos</h1>
         <button type="button" id="clear-read" class="link-btn" hidden>Limpar lista</button>
       </div>
-      <p class="masthead__status">Assuntos que você marcou nos últimos 30 dias. Segure um item para devolvê-lo à lista.</p>
+      <p class="masthead__status">Assuntos que você marcou nos últimos 30 dias, em qualquer aparelho. Segure um item para devolvê-lo à lista.</p>
       <div id="read-list" class="read-list"></div>
+    </section>
+
+    <!-- Bloqueios (RN-12 a RN-17 de Modulo_Noticias.md): termos que escondem
+         assuntos. Só esconde — nada é apagado, e remover devolve na hora. -->
+    <section class="view view--blocks" id="view-blocks" aria-labelledby="blocks-heading">
+      <div class="masthead">
+        <h1 id="blocks-heading" class="masthead__date">Bloqueios</h1>
+      </div>
+      <p class="masthead__status">Assuntos com estes termos ficam escondidos do Radar. Nada é apagado: removendo o termo, eles voltam.</p>
+
+      <form id="bloq-form" class="bloq-form" autocomplete="off" novalidate>
+        <label class="bloq-label" for="bloq-termo">Bloquear um termo</label>
+        <div class="bloq-linha">
+          <input id="bloq-termo" class="bloq-input" type="text" maxlength="60" spellcheck="false"
+                 placeholder="Ex.: BBB, A Fazenda" enterkeyhint="done" />
+          <button id="bloq-salvar" class="bloq-btn" type="submit" disabled>Bloquear</button>
+        </div>
+        <div class="bloq-periodo" role="radiogroup" aria-label="Por quanto tempo">
+          <button type="button" class="bloq-per" role="radio" aria-checked="false" data-dias="7">7 dias</button>
+          <button type="button" class="bloq-per" role="radio" aria-checked="false" data-dias="30">30 dias</button>
+          <button type="button" class="bloq-per" role="radio" aria-checked="true" data-dias="">Sempre</button>
+        </div>
+        <div id="bloq-previa" class="bloq-previa" aria-live="polite" hidden></div>
+      </form>
+
+      <h2 class="bloq-titulo">Termos bloqueados <span id="bloq-total" class="bloq-total"></span></h2>
+      <div id="bloq-lista" class="bloq-lista"></div>
     </section>
 
     <aside class="view view--trends rail" id="view-trends" aria-labelledby="trends-heading">
@@ -130,6 +159,10 @@
     <button class="tabbar__btn" data-view="read">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Lidos <span class="badge" data-read-count></span>
+    </button>
+    <button class="tabbar__btn" data-view="blocks">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Bloqueios
     </button>
   </nav>
 

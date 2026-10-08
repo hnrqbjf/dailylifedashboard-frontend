@@ -12,7 +12,8 @@ const ARMAR_MS = 240;               // segurar PARADO antes de qualquer efeito: 
 const CARGA_MS = 760;               // depois disso, a barra enche; soltar antes cancela
 const LONG_PRESS_MS = ARMAR_MS + CARGA_MS;   // total para marcar como lida (1 s)
 const EASE = "cubic-bezier(.2, .8, .2, 1)";
-const READ_KEY = "radar.read.v1";   // lidos ficam só neste navegador (localStorage)
+const READ_KEY = "radar.read.v1";   // lidos ANTIGOS, só deste navegador: importados para o banco uma vez (RN-21)
+const READ_CACHE_KEY = "radar.read.cache.v2";   // cópia do que veio do banco, só para a 1ª pintura
 const PREFS_KEY = "radar.prefs.v1";
 const HINT_KEY = "radar.hint.v1";
 const READ_KEEP_DAYS = 30;
@@ -34,45 +35,127 @@ function lsSet(key, value) {
 }
 
 const prefs = Object.assign({ period: "day", category: "all", intl: true }, lsGet(PREFS_KEY, {}));
-const state = { ...prefs, view: "news", stories: [], lastFetch: null, loaded: false, fontes: [] };
+const state = { ...prefs, view: "news", stories: [], lastFetch: null, loaded: false, fontes: [], escondidos: 0 };
 const savePrefs = () => lsSet(PREFS_KEY, { period: state.period, category: state.category, intl: state.intl });
 
 /* ---------------- lidos ----------------
    O id de um assunto muda quando uma matéria nova entra no grupo, então
    guardamos os links das matérias: se qualquer link do assunto já foi
-   marcado, o assunto inteiro conta como lido. */
-let readEntries = lsGet(READ_KEY, []).filter((e) => e.readAt > Date.now() - READ_KEEP_DAYS * 864e5);
+   marcado, o assunto inteiro conta como lido.
+
+   Desde 08/10/2026 os lidos vivem no banco (RN-18 a RN-21): valem em qualquer
+   aparelho. A tela muda primeiro e conversa com o servidor depois (marcar não
+   espera a rede); se o servidor recusar, a tela volta atrás e avisa. Uma cópia
+   fica no localStorage só para a lista não piscar "não lida" enquanto o banco
+   responde. */
+let readEntries = lsGet(READ_CACHE_KEY, []).filter((e) => e.readAt > Date.now() - READ_KEEP_DAYS * 864e5);
 let readLinks = new Set();
 function rebuildReadIndex() {
   readLinks = new Set(readEntries.flatMap((e) => e.links));
   const n = readEntries.length;
   $$("[data-read-count]").forEach((el) => (el.textContent = n ? String(n) : ""));
   $("#clear-read").hidden = n === 0;
+  lsSet(READ_CACHE_KEY, readEntries);
 }
 const storyLinks = (s) => [...new Set([s.link, ...s.articles.map((a) => a.link)])];
 const isRead = (s) => storyLinks(s).some((l) => readLinks.has(l));
 
+const doServidor = (e) => ({
+  uid: e.id, id: e.story_id, title: e.title, link: e.link, source: e.source, category: e.category,
+  sources: e.sources, links: e.links, readAt: new Date(e.read_at).getTime(),
+});
+const paraServidor = (e) => ({
+  story_id: String(e.id).slice(0, 40), title: e.title, link: e.link, source: e.source || "?",
+  category: e.category || "geral", sources: Math.max(1, e.sources || 1), links: e.links.slice(0, 60),
+  read_at: new Date(e.readAt).toISOString(),
+});
+function falhaLidos(e, texto) {
+  if (e instanceof SemSessao) return;
+  toast(texto);
+}
+
+// Devolve se algo mudou, para quem chamou só redesenhar quando precisa.
+async function sincronizarLidos() {
+  try {
+    const { entries } = await api("/noticias/lidas");
+    const antes = readEntries.map((e) => e.uid).join();
+    readEntries = entries.map(doServidor);
+    rebuildReadIndex();
+    return antes !== readEntries.map((e) => e.uid).join();
+  } catch (e) { return false; /* sem rede: segue a cópia local até a próxima vez */ }
+}
+
+// RN-21: o que estava só neste navegador sobe para o banco, uma vez.
+async function importarLidosAntigos() {
+  const antigos = lsGet(READ_KEY, []).filter((e) => e && Array.isArray(e.links) && e.links.length && e.title && e.link);
+  if (!antigos.length) { try { localStorage.removeItem(READ_KEY); } catch { /* ok */ } return; }
+  try {
+    for (let i = 0; i < antigos.length; i += 500) {
+      await api("/noticias/lidas/importar", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entries: antigos.slice(i, i + 500).map(paraServidor) }),
+      });
+    }
+    localStorage.removeItem(READ_KEY);
+  } catch { /* tenta de novo na próxima abertura */ }
+}
+
 function markRead(s) {
   if (isRead(s)) return;
-  readEntries.unshift({
-    id: s.id, title: s.title, link: s.link, source: s.source, category: s.category,
+  const entry = {
+    uid: null, id: s.id, title: s.title, link: s.link, source: s.source, category: s.category,
     sources: s.sources_count, links: storyLinks(s), readAt: Date.now(),
-  });
-  lsSet(READ_KEY, readEntries);
+  };
+  readEntries.unshift(entry);
   rebuildReadIndex();
+  api("/noticias/lidas", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(paraServidor(entry)),
+  }).then((salva) => {
+    Object.assign(entry, doServidor(salva));
+    rebuildReadIndex();
+  }).catch((e) => {
+    readEntries = readEntries.filter((x) => x !== entry);
+    rebuildReadIndex(); renderNews(); renderRead();
+    falhaLidos(e, "Não consegui salvar a leitura. Tente de novo.");
+  });
 }
 function unmarkLinks(links) {
   const set = new Set(links);
   const removed = readEntries.filter((e) => e.links.some((l) => set.has(l)));
   readEntries = readEntries.filter((e) => !e.links.some((l) => set.has(l)));
-  lsSet(READ_KEY, readEntries);
   rebuildReadIndex();
+  if (removed.length) {
+    api("/noticias/lidas/desmarcar", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ links: [...set].slice(0, 60) }),
+    }).catch((e) => {
+      readEntries = [...removed, ...readEntries].sort((a, b) => b.readAt - a.readAt);
+      rebuildReadIndex(); renderNews(); renderRead();
+      falhaLidos(e, "Não consegui desmarcar. Tente de novo.");
+    });
+  }
   return removed;
 }
+// "Desfazer": volta com a hora original de cada leitura.
 function restoreEntries(entries) {
+  if (!entries.length) return;
   readEntries = [...entries, ...readEntries].sort((a, b) => b.readAt - a.readAt);
-  lsSet(READ_KEY, readEntries);
   rebuildReadIndex();
+  api("/noticias/lidas/importar", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entries: entries.map(paraServidor) }),
+  }).then(sincronizarLidos).catch((e) => falhaLidos(e, "Não consegui desfazer. Tente de novo."));
+}
+function clearAllRead() {
+  const removed = readEntries;
+  readEntries = [];
+  rebuildReadIndex();
+  api("/noticias/lidas", { method: "DELETE" }).catch((e) => {
+    readEntries = removed; rebuildReadIndex(); renderRead(); renderNews();
+    falhaLidos(e, "Não consegui limpar a lista. Tente de novo.");
+  });
+  return removed;
 }
 
 /* ---------------- utilidades ---------------- */
@@ -102,6 +185,7 @@ async function api(path, opts = {}) {
     throw new SemSessao();
   }
   if (!r.ok) throw new ErroApi(r.status, await r.json().catch(() => null));
+  if (r.status === 204) return null;          // DELETE: sem corpo
   return r.json();
 }
 function timeAgo(iso) {
@@ -341,9 +425,38 @@ function meter(n) {
   return m;
 }
 
+// url da imagem -> "ok" | "erro": o que já carregou não espera de novo, e o que
+// falhou nem é tentado de novo a cada redesenho da lista.
+const imagens = new Map();
+
+function abrirImagem(img) {
+  img.classList.remove("story__thumb--espera");
+  if (reduzMovimento()) return;
+  const cs = getComputedStyle(img);
+  const h = img.getBoundingClientRect().height;
+  img.animate([
+    { height: "0px", marginBottom: "0px", opacity: 0 },
+    { height: `${h}px`, marginBottom: cs.marginBottom, opacity: 1 },
+  ], { duration: 650, easing: SUAVE });
+}
+
+function iconeCheck() {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 20 20"); svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", "story__check-ico");
+  const p = document.createElementNS(ns, "path");
+  p.setAttribute("d", "M4.5 10.5l3.6 3.6L15.5 6.4");
+  p.setAttribute("fill", "none"); p.setAttribute("stroke", "currentColor");
+  p.setAttribute("stroke-width", "2.2"); p.setAttribute("stroke-linecap", "round"); p.setAttribute("stroke-linejoin", "round");
+  svg.append(p);
+  return svg;
+}
+
 function renderStory(s, i) {
   const read = isRead(s);
-  const row = el("article", "story" + (i === 0 ? " story--lead" : "") + (read ? " is-read" : ""));
+  const row = el("article", "story" + (i === 0 ? " story--lead" : "") + (read ? " is-read" : "")
+    + (s.articles.length > 1 ? "" : " story--sem-mais"));
   row.dataset.id = s.id;
   row.append(el("span", "story__sweep"));
   row.append(el("span", "story__rank", String(i + 1)));
@@ -391,17 +504,32 @@ function renderStory(s, i) {
   }
   row.append(main);
 
-  if (s.image) {
+  if (s.image && imagens.get(s.image) !== "erro") {
     const img = el("img", "story__thumb");
-    img.src = s.image; img.alt = ""; img.loading = i < 3 ? "eager" : "lazy";
+    // Manchete com imagem que ainda não vimos carregar: fica fora do layout até
+    // carregar e então abre suave. Antes, o espaço 16:9 aparecia vazio e, se
+    // o link da imagem estivesse quebrado, sumia de uma vez — o card "piscava".
+    const esperar = i === 0 && imagens.get(s.image) !== "ok";
+    if (esperar) img.classList.add("story__thumb--espera");
+    img.onload = () => {
+      imagens.set(s.image, "ok");
+      if (esperar) abrirImagem(img);
+    };
+    img.onerror = () => { imagens.set(s.image, "erro"); img.remove(); };
+    img.alt = ""; img.loading = i < 3 ? "eager" : "lazy";
     img.referrerPolicy = "no-referrer"; img.draggable = false;
-    img.onerror = () => img.remove();
+    img.src = s.image;
     row.append(img);
   }
 
-  const check = el("button", "story__check", read ? "Desmarcar" : "Marcar como lida");
+  // Canto inferior direito, sempre visível. No computador, ícone + texto;
+  // no celular, só um quadrado discreto com o ícone (o toque longo continua).
+  const check = el("button", "story__check" + (read ? " is-on" : ""));
   check.type = "button";
   check.dataset.noPress = "";
+  check.setAttribute("aria-label", read ? "Desmarcar como lida" : "Marcar como lida");
+  check.title = read ? "Desmarcar" : "Marcar como lida";
+  check.append(iconeCheck(), el("span", "story__check-txt", read ? "Desmarcar" : "Marcar como lida"));
   check.addEventListener("click", () => {
     if (!isRead(s)) { const c = criarCarga(row); c.concluir(); }
     toggleRead(row);
@@ -426,6 +554,9 @@ function renderNews() {
       ? `${unread} ${unread === 1 ? "assunto para ler" : "assuntos para ler"}`
       : `${items.length} assuntos${where}, ${unread} não lidos`;
   atualizarIdade();
+  const oculto = $("#status-hidden");
+  oculto.hidden = !state.loaded || !state.escondidos;
+  oculto.textContent = state.escondidos === 1 ? "1 escondido pelos bloqueios" : `${state.escondidos} escondidos pelos bloqueios`;
 
   if (!state.loaded) return;
   // A dica do toque longo só faz sentido com notícia na tela.
@@ -460,66 +591,106 @@ function skeleton() {
 }
 
 /* ---------------- transição ao marcar como lida ----------------
-   1) a linha pisca em amarelo e se recolhe (as de baixo sobem junto, sem
-      salto); 2) a lista é redesenhada e, se a que saiu era a manchete, a
-      próxima vira manchete com a imagem se abrindo de cima para baixo e o
-      título crescendo até o tamanho de manchete — em vez de a imagem grande
-      aparecer de uma vez. */
+   Revista em 08/10/2026 (a primeira versão era rápida e "pulava"):
+   - linha do meio: pisca, se recolhe devagar, e os números das de baixo
+     ROLAM para o novo valor (o antigo sobe e some, o novo entra por baixo),
+     um depois do outro — em vez de trocarem de uma vez ao redesenhar;
+   - manchete: some no lugar (sem mexer em nada), a seguinte aparece no mesmo
+     lugar já como manchete — imagem num fade com um leve zoom, textos subindo
+     em sequência — e o resto da lista desliza até a nova posição. */
 const reduzMovimento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const SUAVE = "cubic-bezier(.45, 0, .2, 1)";   // entra e sai devagar
 
-function sairDaLista(row, depois) {
-  row.classList.add("is-done");
-  if (reduzMovimento()) return depois();
+function rolarNumero(span, novo, atraso, velho = span && span.textContent) {
+  if (!span || String(velho) === String(novo)) return;
+  if (getComputedStyle(span).display === "none") { span.textContent = String(novo); return; }
+  const sai = el("span", null, velho), entra = el("span", null, String(novo));
+  span.replaceChildren(entra, sai);
+  span.classList.add("rolando");
+  const op = { duration: 560, delay: atraso, easing: SUAVE, fill: "both" };
+  sai.animate([{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(-90%)", opacity: 0 }], op);
+  entra.animate([{ transform: "translateY(90%)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], op)
+    .onfinish = () => { span.textContent = String(novo); span.classList.remove("rolando"); };
+}
+
+// As linhas depois da que saiu ganham o número de uma posição acima.
+function rolarNumerosAbaixo(linhas, desde) {
+  linhas.slice(desde + 1).forEach((r, k) => {
+    const novo = desde + k + 1;           // posição nova, contando de 1
+    if (novo === 1) {                     // vai virar manchete, que não tem número: o dela só some
+      r.querySelectorAll(".story__rank, .rank-inline").forEach((n) =>
+        n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: SUAVE, fill: "forwards" }));
+      return;
+    }
+    const atraso = Math.min(k * 45, 420);
+    rolarNumero(r.querySelector(".story__rank"), novo, atraso);
+    rolarNumero(r.querySelector(".rank-inline"), novo, atraso);
+  });
+}
+
+function recolherLinha(row, depois) {
   const h = row.getBoundingClientRect().height;
   const cs = getComputedStyle(row);
   row.style.overflow = "hidden";
-  const a = row.animate([
+  row.animate([
     { height: `${h}px`, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1, offset: 0 },
-    { height: `${h}px`, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1, offset: 0.3 },
+    { height: `${h}px`, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 0, offset: 0.35 },
     { height: "0px", paddingTop: "0px", paddingBottom: "0px", opacity: 0 },
-  ], { duration: 520, easing: EASE, fill: "forwards" });
-  a.onfinish = depois;
+  ], { duration: 900, easing: SUAVE, fill: "forwards" }).onfinish = depois;
 }
 
-function renderNewsAnimado() {
-  if (reduzMovimento()) return renderNews();
-  const antes = new Map();
-  $$("#stories .story").forEach((r) => {
-    const t = r.querySelector(".story__title");
-    antes.set(r.dataset.id, { lead: r.classList.contains("story--lead"), fs: t ? parseFloat(getComputedStyle(t).fontSize) : 0 });
-  });
+/* Troca da manchete (revista de novo em 08/10/2026 — no celular ainda
+   "encolhia e abria"). Agora é um crossfade de verdade:
+   - uma CÓPIA da manchete antiga e da notícia que vai subir fica por cima,
+     no mesmo lugar, e só some (fade);
+   - por baixo, a lista já está redesenhada, e a nova manchete começa com a
+     altura que as duas ocupavam juntas e vai, devagar, para a altura dela —
+     então nada abaixo dá salto: o resto da lista só desliza junto;
+   - o conteúdo novo aparece em fade enquanto a cópia some. */
+function trocarManchete(lead) {
+  const lista = $("#stories");
+  const linhas = [...lista.querySelectorAll(".story")];
+  const segunda = linhas[1];
+  const rl = lista.getBoundingClientRect(), r0 = lead.getBoundingClientRect(), r1 = segunda.getBoundingClientRect();
+  const alturaAntes = r1.bottom - r0.top;
+
+  const fantasma = el("div", "troca-fantasma");
+  fantasma.setAttribute("aria-hidden", "true");
+  Object.assign(fantasma.style, { top: `${r0.top - rl.top}px`, height: `${alturaAntes}px` });
+  fantasma.append(lead.cloneNode(true), segunda.cloneNode(true));
+
   renderNews();
-  const lead = $("#stories .story--lead");
-  const a = lead && antes.get(lead.dataset.id);
-  if (a && !a.lead) promoverManchete(lead, a.fs);
+  lista.append(fantasma);
+  const nova = lista.querySelector(".story--lead");
+  if (!nova) { fantasma.remove(); return; }
+
+  const D = 1000;
+  const alturaDepois = nova.getBoundingClientRect().height;
+  nova.style.overflow = "hidden";
+  nova.animate([{ height: `${alturaAntes}px` }, { height: `${alturaDepois}px` }], { duration: D, easing: SUAVE })
+    .onfinish = () => { nova.style.overflow = ""; };
+  nova.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 700, delay: 220, easing: SUAVE, fill: "backwards" });
+  const img = nova.querySelector(".story__thumb:not(.story__thumb--espera)");
+  if (img) img.animate([{ transform: "scale(1.03)" }, { transform: "none" }], { duration: 1200, easing: SUAVE });
+  fantasma.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 520, easing: "ease-out", fill: "forwards" })
+    .onfinish = () => fantasma.remove();
+
+  // números: a lista nova já nasceu com eles certos; rolam a partir do antigo
+  [...lista.querySelectorAll(".story:not(.story--lead)")].forEach((r, k) => {
+    const novo = k + 2, atraso = Math.min(k * 45, 420);
+    rolarNumero(r.querySelector(".story__rank"), novo, atraso, novo + 1);
+    rolarNumero(r.querySelector(".rank-inline"), novo, atraso, novo + 1);
+  });
 }
 
-function promoverManchete(row, fsAntes) {
-  const D = 640;
-  const img = row.querySelector(".story__thumb");
-  if (img && img.complete && img.naturalWidth) {
-    const cs = getComputedStyle(img);
-    const H = img.getBoundingClientRect().height;
-    img.animate([
-      { height: "0px", marginBottom: "0px", opacity: 0, clipPath: "inset(0 0 100% 0 round 14px)" },
-      { height: `${H}px`, marginBottom: cs.marginBottom, opacity: 1, clipPath: "inset(0 0 0% 0 round 14px)" },
-    ], { duration: D, easing: EASE });
-  } else if (img) {
-    img.animate([{ opacity: 0 }, { opacity: 1 }], { duration: D, easing: "ease" });
-  }
-  const t = row.querySelector(".story__title");
-  if (t && fsAntes) {
-    t.animate([{ fontSize: `${fsAntes}px` }, { fontSize: getComputedStyle(t).fontSize }], { duration: D, easing: EASE });
-  }
-  const resumo = row.querySelector(".story__summary");
-  if (resumo) resumo.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: D, easing: "ease" });
-  // um brilho amarelo que atravessa a nova manchete: "subiu para o topo"
-  const sweep = row.querySelector(".story__sweep");
-  if (sweep) sweep.animate([
-    { transform: "scaleX(0)", opacity: 0.9, transformOrigin: "left center" },
-    { transform: "scaleX(1)", opacity: 0.6, transformOrigin: "left center", offset: 0.5 },
-    { transform: "scaleX(1)", opacity: 0, transformOrigin: "left center" },
-  ], { duration: 900, easing: EASE });
+function sairDaLista(row) {
+  row.classList.add("is-done");
+  if (reduzMovimento()) return renderNews();
+  const linhas = [...$$("#stories .story")];
+  const i = linhas.indexOf(row);
+  if (i === 0 && linhas.length > 1) return trocarManchete(row);
+  rolarNumerosAbaixo(linhas, i);
+  recolherLinha(row, renderNews);   // números já rolaram: redesenhar não muda nada na tela
 }
 
 function toggleRead(row) {
@@ -534,7 +705,7 @@ function toggleRead(row) {
   markRead(s);
   const undo = () => { unmarkLinks(storyLinks(s)); renderNews(); renderRead(); };
   renderRead();
-  if (state.category === "all") sairDaLista(row, renderNewsAnimado);
+  if (state.category === "all") sairDaLista(row);
   else renderNews();
   toast("Marcada como lida", "Desfazer", undo);
 }
@@ -550,6 +721,7 @@ async function loadStories() {
     const data = await api(`/noticias/top?${q}`);
     state.stories = data.stories;
     state.lastFetch = data.last_fetch;
+    state.escondidos = data.hidden_count || 0;
     state.loaded = true;
     renderNews();
   } catch (e) {
@@ -668,6 +840,7 @@ function setView(view) {
     if (b.dataset.view === view) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   });
   if (view === "read") renderRead();
+  if (view === "blocks") loadBloqueios();
   window.scrollTo({ top: 0 });
 }
 
@@ -795,6 +968,194 @@ async function mostrarResultado(resumo, feeds) {
   await new Promise((r) => setTimeout(r, RESULTADO_MS));
 }
 
+/* ---------------- bloqueios (RN-12 a RN-17) ----------------
+   O servidor decide o que casa (app/noticias/bloqueios.py); aqui a mesma
+   normalização existe só para GRIFAR o termo nos títulos da prévia e da lista. */
+function normalizarComMapa(texto) {
+  // Devolve o texto normalizado e, para cada caractere dele, o índice do
+  // caractere original — para achar o trecho certo no título de verdade.
+  let norm = "", mapa = [];
+  for (let i = 0; i < texto.length; i++) {
+    const base = texto[i].normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    if (/^[0-9a-z]+$/.test(base)) { for (const c of base) { norm += c; mapa.push(i); } }
+    else if (norm && !norm.endsWith(" ")) { norm += " "; mapa.push(i); }
+  }
+  return { norm: norm.trimEnd(), mapa };
+}
+const normalizarTermo = (t) => normalizarComMapa(t).norm;
+
+function grifar(texto, termoNorm) {
+  const frag = document.createDocumentFragment();
+  const { norm, mapa } = normalizarComMapa(texto);
+  const re = new RegExp("(?:^| )" + termoNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const m = termoNorm ? re.exec(norm) : null;
+  if (!m) { frag.append(texto); return frag; }
+  const ini = m.index + (m[0].startsWith(" ") ? 1 : 0);
+  const fim = ini + termoNorm.length - 1;
+  // até o fim da palavra: o termo é prefixo ("bbb" grifa "BBB26" inteiro)
+  let a = mapa[ini], b = mapa[fim] + 1;
+  while (b < texto.length && /[0-9A-Za-zÀ-ÿ]/.test(texto[b])) b++;
+  frag.append(texto.slice(0, a), el("mark", null, texto.slice(a, b)), texto.slice(b));
+  return frag;
+}
+
+// O termo não está no título: mostra onde está (outro veículo, resumo).
+function trechoQueCasa(texto, termoNorm) {
+  const p = el("span", "bloq-onde");
+  p.append("em: ", grifar(texto, termoNorm));
+  return p;
+}
+
+const bloq = { dias: null, timer: 0, seq: 0, valido: false };
+
+function quandoVence(iso) {
+  if (!iso) return "sempre";
+  const d = new Date(iso);
+  return `até ${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`;
+}
+
+async function loadBloqueios() {
+  const box = $("#bloq-lista");
+  try {
+    renderBloqueios(await api("/noticias/bloqueios"));
+  } catch (e) {
+    if (e instanceof SemSessao) return;
+    box.replaceChildren(el("p", "empty", "Não foi possível carregar os bloqueios."));
+  }
+}
+
+function renderBloqueios({ terms }) {
+  const box = $("#bloq-lista");
+  $("#bloq-total").textContent = terms.length ? `(${terms.length})` : "";
+  if (!terms.length) {
+    box.replaceChildren(el("p", "bloq-vazio", "Nenhum termo bloqueado. Tudo o que as fontes trazem aparece no Radar."));
+    return;
+  }
+  box.replaceChildren(...terms.map((t) => {
+    const item = el("div", "bloq-item");
+    item.append(el("span", "bloq-termo", t.term));
+    const rem = el("button", "link-btn", "Remover");
+    rem.type = "button";
+    rem.onclick = () => removerBloqueio(t, rem);
+    item.append(rem);
+    const meta = el("div", "bloq-meta");
+    meta.append(
+      el("span", null, t.hidden_count === 0 ? "nada escondido agora" : t.hidden_count === 1 ? "esconde 1 assunto" : `esconde ${t.hidden_count} assuntos`),
+      el("span", null, quandoVence(t.expires_at)),
+    );
+    item.append(meta);
+    if (t.hidden.length) {
+      // o mesmo acordeão do "Ver os N veículos" das notícias
+      const det = el("details", "story__more");
+      det.append(el("summary", null, t.hidden.length === 1 ? "Ver o assunto escondido" : `Ver os ${t.hidden.length} assuntos escondidos`));
+      const ul = el("ul");
+      const termoNorm = normalizarTermo(t.term);
+      for (const h of t.hidden) {
+        const li = el("li");
+        const a = el("a");
+        a.href = h.link; a.target = "_blank"; a.rel = "noopener";
+        a.append(grifar(h.title, termoNorm));
+        li.append(el("span", "src", `${h.source} · ${CAT_LABEL[h.category] || h.category}`), a);
+        if (h.match) li.append(trechoQueCasa(h.match, termoNorm));
+        ul.append(li);
+      }
+      det.append(ul);
+      item.append(det);
+    }
+    return item;
+  }));
+}
+
+async function removerBloqueio(t, botao) {
+  botao.disabled = true;
+  try {
+    await api(`/noticias/bloqueios/${t.id}`, { method: "DELETE" });
+    toast(`"${t.term}" não está mais bloqueado`);
+    await Promise.all([loadBloqueios(), loadStories(), loadTrends()]);
+  } catch (e) {
+    botao.disabled = false;
+    if (!(e instanceof SemSessao)) toast(e instanceof ErroApi ? e.message : "Não consegui remover agora. Tente de novo.");
+  }
+}
+
+function mostrarPrevia(conteudo, aviso = false) {
+  const box = $("#bloq-previa");
+  box.classList.toggle("is-aviso", aviso);
+  if (!conteudo) { box.hidden = true; box.replaceChildren(); return; }
+  box.replaceChildren(...[].concat(conteudo));
+  box.hidden = false;
+}
+
+async function atualizarPrevia() {
+  const termo = $("#bloq-termo").value.trim();
+  const norm = normalizarTermo(termo);
+  bloq.valido = false;
+  $("#bloq-salvar").disabled = true;
+  clearTimeout(bloq.timer);
+  if (norm.length < 2) { mostrarPrevia(null); return; }
+  bloq.timer = setTimeout(async () => {
+    const seq = ++bloq.seq;
+    try {
+      const p = await api(`/noticias/bloqueios/previa?termo=${encodeURIComponent(termo)}`);
+      if (seq !== bloq.seq) return;               // o usuário já digitou outra coisa
+      if (p.already_blocked) {
+        const t = el("p"); t.append("Esse termo já está bloqueado.");
+        return mostrarPrevia(t);
+      }
+      bloq.valido = true;
+      $("#bloq-salvar").disabled = false;
+      if (!p.count) {
+        const t = el("p");
+        t.append("Nenhum assunto desta semana tem esse termo. O bloqueio passa a valer para as próximas buscas.");
+        return mostrarPrevia(t);
+      }
+      const t = el("p");
+      t.append("Esconderia ", el("strong", null, p.count === 1 ? "1 assunto" : `${p.count} assuntos`), " agora",
+        p.count > p.examples.length ? `. Alguns deles:` : ":");
+      const ul = el("ul");
+      for (const ex of p.examples) {
+        const li = el("li");
+        li.append(grifar(ex.title, p.normalized), el("span", "src", ex.source));
+        if (ex.match) li.append(trechoQueCasa(ex.match, p.normalized));
+        ul.append(li);
+      }
+      // muita coisa pega costuma ser termo curto demais (o "Fazenda" do Ministério)
+      mostrarPrevia([t, ul], p.count >= 8);
+    } catch (e) {
+      if (seq !== bloq.seq || e instanceof SemSessao) return;
+      mostrarPrevia(el("p", null, e instanceof ErroApi ? e.message : "Não consegui calcular a prévia agora."));
+    }
+  }, 350);
+}
+
+$("#bloq-termo").addEventListener("input", atualizarPrevia);
+$$(".bloq-per").forEach((b) => b.addEventListener("click", () => {
+  $$(".bloq-per").forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+  bloq.dias = b.dataset.dias ? Number(b.dataset.dias) : null;
+}));
+$("#bloq-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const termo = $("#bloq-termo").value.trim();
+  const btn = $("#bloq-salvar");
+  if (!bloq.valido || btn.disabled) return;
+  btn.disabled = true;
+  try {
+    const t = await api("/noticias/bloqueios", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ termo, dias: bloq.dias }),
+    });
+    $("#bloq-termo").value = "";
+    mostrarPrevia(null);
+    bloq.valido = false;
+    toast(t.hidden_count ? `"${t.term}" bloqueado: ${t.hidden_count === 1 ? "1 assunto escondido" : `${t.hidden_count} assuntos escondidos`}` : `"${t.term}" bloqueado`);
+    await Promise.all([loadBloqueios(), loadStories(), loadTrends()]);
+  } catch (err) {
+    btn.disabled = false;
+    if (!(err instanceof SemSessao)) toast(err instanceof ErroApi ? err.message : "Não consegui bloquear agora. Tente de novo.");
+  }
+});
+$("#status-hidden").addEventListener("click", () => setView("blocks"));
+
 /* ---------------- tema ----------------
    O mesmo `dld_tema` do DLD: trocar aqui troca lá, e vice-versa. O DLD tem um
    terceiro estado ("seguir o aparelho", sem chave salva); aqui o botão só
@@ -867,6 +1228,8 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
   atualizarIdade();
   conferirOutraBusca();
+  // lido em outro aparelho enquanto esta aba dormia
+  if (token()) sincronizarLidos().then((mudou) => { if (!mudou) return; renderNews(); if (state.view === "read") renderRead(); });
 });
 
 async function refresh() {
@@ -922,8 +1285,7 @@ $("#intl").addEventListener("click", () => {
 $$(".tabbar__btn, .topnav__btn").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
 $("#refresh").addEventListener("click", refresh);
 $("#clear-read").addEventListener("click", () => {
-  const removed = readEntries;
-  readEntries = []; lsSet(READ_KEY, readEntries); rebuildReadIndex();
+  const removed = clearAllRead();
   renderRead(); renderNews();
   toast("Lista de lidos limpa", "Desfazer", () => { restoreEntries(removed); renderRead(); renderNews(); });
 });
@@ -981,6 +1343,9 @@ async function iniciar() {
   rebuildReadIndex();
   syncControls();
   skeleton();
+  // Lidos antes das notícias: a lista já nasce sem o que foi lido em outro aparelho.
+  await importarLidosAntigos();
+  await sincronizarLidos();
   await refreshAll();
 }
 

@@ -391,14 +391,11 @@
   @media (min-width: 560px) and (max-width: 899px) {
     .card-radar .radar-icone svg { width: 30px; height: 30px; }
   }
-  /* No trilho do desktop os cards são uma linha só e o texto cortaria em
-     "Abrir notícias do…": ali ele desce para baixo do nome. */
+  /* No trilho do desktop o card é só o nome, como os outros módulos: o
+     "Abrir notícias do Radar" saiu em 08/10/2026 (antes descia para uma
+     segunda linha, e o card ficava mais alto que os vizinhos). */
   @media (min-width: 900px) {
-    .card-radar:not(.open) .card-header {
-      display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 1px;
-    }
-    .card-radar .radar-icone { grid-row: 1 / span 2; }
-    .card-radar .card-sub { text-align: left; font-size: .74rem; }
+    .card-radar .card-sub { display: none; }
   }
 
   /* Linha informativa dentro de uma folha de opções (não é botão) */
@@ -1301,6 +1298,27 @@
   .tarefa-caixa-grupo > summary.tarefa-grupo-titulo::before { content: '▾'; font-size: .65rem; }
   .tarefa-caixa-grupo:not([open]) > summary.tarefa-grupo-titulo { margin-bottom: 0; }
   .tarefa-caixa-grupo:not([open]) > summary.tarefa-grupo-titulo::before { content: '▸'; }
+  .tarefa-grupo-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* "+" do grupo: só com o grupo aberto, na mesma linha do nome, à direita. */
+  .btn-grupo-add {
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 8px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font: 700 1rem/1 inherit;
+    font-family: inherit;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+  .btn-grupo-add:hover { background: var(--accent); color: #fff; }
+  .btn-grupo-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tarefa-caixa-grupo:not([open]) .btn-grupo-add { display: none; }
 
   /* Sem-grupo (a "caixa de entrada", RN-33) também é <details>, mas com o
      <summary> nativo escondido: quem abre/fecha é o rótulo externo "Suas
@@ -5633,7 +5651,9 @@ function renderTarefas() {
     // todos de uma vez (toggleTodosGruposTarefas).
     html += comGrupo.map(([g, itens]) => `
       <details class="tarefa-caixa-grupo" data-grupo="${escHtml(g)}" open>
-        <summary class="tarefa-grupo-titulo">${escHtml(g)}</summary>
+        <summary class="tarefa-grupo-titulo"><span class="tarefa-grupo-nome">${escHtml(g)}</span>
+          <button type="button" class="btn-grupo-add" onclick="novaTarefaNoGrupo(event, this)"
+                  aria-label="Nova tarefa em ${escHtml(g)}" title="Nova tarefa neste grupo">+</button></summary>
         ${ordenadas(itens).map(x => tarefaRowHtml(x, false)).join('')}
       </details>`).join('');
   }
@@ -5963,7 +5983,16 @@ function alternarRepeticao() {
     marcado ? 'Prazo da primeira ocorrência' : 'Prazo (opcional)';
 }
 
-function abrirModalTarefa(id = null) {
+/* "+" no cabeçalho de um grupo aberto (08/10/2026): nova tarefa já com o
+   grupo preenchido. O nome vem do data-grupo da caixa, não do onclick — nome
+   de grupo é texto livre e não precisa de um escape a mais por isso. */
+function novaTarefaNoGrupo(evento, botao) {
+  evento.preventDefault();      // sem isso o clique também fecharia o grupo (<summary>)
+  evento.stopPropagation();
+  abrirModalTarefa(null, botao.closest('details').dataset.grupo || '');
+}
+
+function abrirModalTarefa(id = null, grupo = '') {
   tarefaEditandoId = id;
   const form = document.getElementById('tarefa-form');
   const titulo = document.getElementById('modal-titulo-tarefa');
@@ -5992,6 +6021,7 @@ function abrirModalTarefa(id = null) {
   } else {
     titulo.textContent = 'Nova tarefa';
     btn.textContent = 'Adicionar';
+    if (grupo) document.getElementById('tarefa-grupo').value = grupo;
   }
 
   // Sugestões montadas a cada abertura, a partir do que já está em memória.

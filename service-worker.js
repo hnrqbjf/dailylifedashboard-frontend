@@ -45,7 +45,10 @@
 // e as Configurações ganharam "Módulos na tela" (escolher o que aparece, salvo
 // neste aparelho — context/Modulo_Dashboard.md, F7). Tasks virou o primeiro
 // card; no Radar: botão de tema, nova animação ao marcar como lida e a
-// varredura mais lenta.
+// varredura mais lenta. Depois: transição de lida mais lenta (números rolando),
+// botão de lida no canto inferior direito e a aba Bloqueios. Por fim: lidos
+// no banco, imagem da manchete sem "piscar", troca da manchete em crossfade,
+// "+" no grupo aberto de Tasks e o card do Radar sem subtítulo no desktop.
 // v8 (14/09/2026): água 480→450 e "Outro valor" como botão, tarefas ordenadas
 // por prioridade com subtarefas recolhíveis, remédios tomados em bloco
 // resumido, e o modal de Status do sistema. Um bump só porque nenhuma dessas
