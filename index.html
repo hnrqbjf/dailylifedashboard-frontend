@@ -1338,18 +1338,6 @@
   }
   .tarefa-row:last-child { margin-bottom: 0; }
 
-  .tarefa-row[class*="prio-"]::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 10px;
-    bottom: 10px;
-    width: 4px;
-    border-radius: 0;
-  }
-  .tarefa-row.prio-ALTA::before  { background: var(--nao); }
-  .tarefa-row.prio-MEDIA::before { background: var(--pendente); }
-  .tarefa-row.prio-BAIXA::before { background: var(--anulado); }
   .tarefa-row.prio-ALTA  { border-color: var(--nao); }
   .tarefa-row.prio-MEDIA { border-color: var(--pendente); }
   .tarefa-row.prio-BAIXA { border-color: var(--anulado); }
